@@ -2,6 +2,7 @@ package com.activeviam.reference;
 
 import com.activeviam.MemoryAllocator;
 import com.activeviam.platform.LinuxPlatform;
+import java.io.Closeable;
 import java.nio.file.Path;
 import java.util.Collections;
 import java.util.HashMap;
@@ -9,7 +10,7 @@ import java.util.Map;
 import java.util.logging.Logger;
 
 /** @author ActiveViam */
-public class MemoryAllocatorOnFile implements MemoryAllocator {
+public class MemoryAllocatorOnFile implements MemoryAllocator, Closeable {
 
   /** Class logger. */
   private static final Logger logger = Logger.getLogger("allocator");
@@ -55,6 +56,11 @@ public class MemoryAllocatorOnFile implements MemoryAllocator {
     this.dir.toFile().mkdirs();
     this.allocators = Collections.synchronizedMap(new HashMap<>());
     this.virtualBlockSize = computeMinimumBlockSize();
+  }
+
+  @Override
+  public void close() {
+    // TODO
   }
 
   /** @return the minimum size of block memory that should be allocated. */
