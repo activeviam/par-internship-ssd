@@ -1,7 +1,10 @@
 package com.activeviam.table.impl;
 
+import com.activeviam.chunk.DoubleChunk;
+import com.activeviam.chunk.HeapDoubleChunk;
+import com.activeviam.chunk.HeapIntegerChunk;
+import com.activeviam.chunk.IntegerChunk;
 import com.activeviam.table.IChunkSet;
-import java.util.Arrays;
 import java.util.BitSet;
 
 /**
@@ -16,10 +19,10 @@ public class ChunkSet implements IChunkSet {
 	protected final int chunkSize;
 
 	/** The values of the attribute columns */
-	protected final int[][] attributes;
+	protected final IntegerChunk[] attributes;
 
 	/** The values of the value columns */
-	protected final double[][] values;
+	protected final DoubleChunk[] values;
 
 	/**
 	 * Constructor
@@ -29,33 +32,36 @@ public class ChunkSet implements IChunkSet {
 	 * @param chunkSize Size of a chunk
 	 */
 	public ChunkSet(final int attributes, final int values, final int chunkSize) {
-		this.attributes = new int[attributes][chunkSize];
-		this.values = new double[values][chunkSize];
+		this.attributes = new IntegerChunk[attributes];
+		for (int i = 0; i < attributes; i++) {
+			this.attributes[i] = new HeapIntegerChunk(chunkSize);
+		}
+		this.values = new DoubleChunk[values];
+		for (int i = 0; i < values; i++) {
+			this.values[i] = new HeapDoubleChunk(chunkSize);
+		}
 		this.chunkSize = chunkSize;
 
-		for (int i = 0; i < attributes; ++i) {
-			Arrays.fill(this.attributes[i], EMPTY_VALUE);
-		}
 	}
 
 	@Override
 	public int readInt(final int row, final int column) {
-		return attributes[column][row];
+		return attributes[column].readInt(row);
 	}
 
 	@Override
 	public double readDouble(final int row, final int column) {
-		return values[column][row];
+		return values[column].readDouble(row);
 	}
 
 	@Override
 	public void writeInt(final int row, final int column, final int value) {
-		this.attributes[column][row] = value;
+		this.attributes[column].writeInt(row, value);
 	}
 
 	@Override
 	public void writeDouble(final int row, final int column, final double value) {
-		this.values[column][row] = value;
+		this.values[column].writeDouble(row, value);
 	}
 
 	@Override
@@ -69,18 +75,16 @@ public class ChunkSet implements IChunkSet {
 				continue;
 			}
 
-			final BitSet partialResult = new BitSet(limit);
-			final int[] column = attributes[p];
-			for (int i = 0; i < limit; i++) {
-				if (column[i] == value) {
-					partialResult.set(i);
+			final IntegerChunk column = attributes[p];
+			final BitSet partialResult = column.findRows(value, limit);
+			if (partialResult != null) {
+				if (result == null) {
+					result = partialResult;
+				} else {
+					result.and(partialResult);
 				}
-			}
-
-			if (result == null) {
-				result = partialResult;
 			} else {
-				result.and(partialResult);
+				return new BitSet();
 			}
 		}
 
