@@ -83,6 +83,10 @@ public class ChunkSet implements IChunkSet {
 				} else {
 					result.and(partialResult);
 				}
+				if (result.isEmpty()) {
+					return result;
+				}
+
 			} else {
 				return new BitSet();
 			}
