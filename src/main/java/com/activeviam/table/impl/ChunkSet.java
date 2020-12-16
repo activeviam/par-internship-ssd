@@ -75,8 +75,8 @@ public class ChunkSet implements IChunkSet {
 				continue;
 			}
 
-			final IntegerChunk column = attributes[p];
-			final BitSet partialResult = column.findRows(value, limit);
+			final IntegerChunk chunk = attributes[p];
+			final BitSet partialResult = chunk.findRows(value, limit);
 			if (partialResult != null) {
 				if (result == null) {
 					result = partialResult;
