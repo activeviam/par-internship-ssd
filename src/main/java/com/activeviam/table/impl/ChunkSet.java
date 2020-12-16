@@ -1,8 +1,7 @@
 package com.activeviam.table.impl;
 
 import com.activeviam.chunk.DoubleChunk;
-import com.activeviam.chunk.HeapDoubleChunk;
-import com.activeviam.chunk.HeapIntegerChunk;
+import com.activeviam.chunk.IChunkAllocator;
 import com.activeviam.chunk.IntegerChunk;
 import com.activeviam.table.IChunkSet;
 import java.util.BitSet;
@@ -31,17 +30,16 @@ public class ChunkSet implements IChunkSet {
 	 * @param values Number of values
 	 * @param chunkSize Size of a chunk
 	 */
-	public ChunkSet(final int attributes, final int values, final int chunkSize) {
+	public ChunkSet(int attributes, int values, int chunkSize, IChunkAllocator allocator) {
 		this.attributes = new IntegerChunk[attributes];
 		for (int i = 0; i < attributes; i++) {
-			this.attributes[i] = new HeapIntegerChunk(chunkSize);
+			this.attributes[i] = allocator.allocateIntergerChunk(chunkSize);
 		}
 		this.values = new DoubleChunk[values];
 		for (int i = 0; i < values; i++) {
-			this.values[i] = new HeapDoubleChunk(chunkSize);
+			this.values[i] = allocator.allocateDoubleChunk(chunkSize);
 		}
 		this.chunkSize = chunkSize;
-
 	}
 
 	@Override

@@ -1,6 +1,8 @@
 package com.activeviam.table.impl;
 
 import static java.lang.Math.min;
+import com.activeviam.chunk.IChunkAllocator;
+import com.activeviam.chunk.OnHeapAllocator;
 import com.activeviam.table.IRecord;
 import com.activeviam.table.IWritableTable;
 import java.util.Arrays;
@@ -25,6 +27,9 @@ public class ColumnarTable implements IWritableTable {
 	 */
 	protected final int valueCount;
 
+	/** Chunk allocator */
+	protected final IChunkAllocator allocator;
+
 	/** Data chunks */
 	protected ChunkSet[] chunks;
 
@@ -41,6 +46,11 @@ public class ColumnarTable implements IWritableTable {
 	protected final ITableWriter writer;
 
 	public ColumnarTable(TableFormat format) {
+		this(format, new OnHeapAllocator());
+	}
+
+	public ColumnarTable(TableFormat format, IChunkAllocator allocator) {
+		this.allocator = allocator;
 		this.attributeCount = format.attributeCount;
 		this.valueCount = format.valueCount;
 		this.chunkSize = format.chunkSize;
@@ -122,7 +132,7 @@ public class ColumnarTable implements IWritableTable {
 
 		final ChunkSet[] newChunks = Arrays.copyOf(oldChunks, numChunks);
 		for (int i = numOldChunks; i < numChunks; ++i) {
-			newChunks[i] = new ChunkSet(attributeCount, valueCount, 1 << chunkOrder);
+			newChunks[i] = new ChunkSet(attributeCount, valueCount, 1 << chunkOrder, allocator);
 		}
 		this.chunks = newChunks;
 	}
