@@ -7,14 +7,13 @@ package com.activeviam.chunk;
  */
 public class OnHeapAllocator implements IChunkAllocator {
 
-	@Override
-	public IntegerChunk allocateIntergerChunk(int size) {
-		return new HeapIntegerChunk(size);
-	}
+  @Override
+  public IntegerChunk allocateIntegerChunk(int size) {
+    return new HeapIntegerChunk(size);
+  }
 
-	@Override
-	public DoubleChunk allocateDoubleChunk(int size) {
-		return new HeapDoubleChunk(size);
-	}
-
+  @Override
+  public DoubleChunk allocateDoubleChunk(int size) {
+    return new HeapDoubleChunk(size);
+  }
 }

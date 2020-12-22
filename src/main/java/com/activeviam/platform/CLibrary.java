@@ -393,4 +393,8 @@ interface CLibrary extends Library {
   // http://man7.org/linux/man-pages/man2/fallocate.2.html
   // int fallocate(int fd, int mode, off_t offset, off_t len);
   int fallocate(int fd, int mode, long offset, long len);
+
+  // https://man7.org/linux/man-pages/man2/read.2.html
+  // ssize_t read(int fd, void *buf, size_t count);
+  int read(int fd, byte[] buffer, long count);
 }

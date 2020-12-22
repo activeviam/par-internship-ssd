@@ -202,4 +202,9 @@ public class BlockAllocatorManager implements IBlockAllocator {
     return UnsafeUtil.compareAndSwapInt(
         blockAllocatorManager, ongoingCreationProcessOffset, expect, update);
   }
+
+  // @Override
+  // public int getfd() {
+  //   return -1;
+  // }
 }

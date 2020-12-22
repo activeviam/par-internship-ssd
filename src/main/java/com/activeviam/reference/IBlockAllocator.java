@@ -43,4 +43,7 @@ public interface IBlockAllocator {
    * to create a <b>new one</b>.
    */
   void release();
+
+  /** If using file, return file descriptor */
+  // int getfd();
 }

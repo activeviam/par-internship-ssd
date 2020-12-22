@@ -1,12 +1,9 @@
 package com.activeviam.chunk;
 
-/**
- * @author ActiveViam
- */
+/** @author ActiveViam */
 public interface IChunkAllocator {
 
-	IntegerChunk allocateIntergerChunk(int size);
+  IntegerChunk allocateIntegerChunk(int size);
 
-	DoubleChunk allocateDoubleChunk(int size);
-
+  DoubleChunk allocateDoubleChunk(int size);
 }

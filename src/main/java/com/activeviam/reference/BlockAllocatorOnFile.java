@@ -89,4 +89,7 @@ class BlockAllocatorOnFile extends ABlockAllocator {
     PLATFORM.closeFile(fd);
     path.toFile().delete();
   }
+
+  // @Override
+  // protected void readContent() {};
 }
