@@ -1,4 +1,6 @@
-﻿DEP_DIR = 	../include \
+﻿HDR_DIR = ../include
+
+DEP_DIR = 	$(HDR_DIR) \
 			$(SPDK_DIR)/include \
 			$(BOOST_DIR)
 
@@ -44,7 +46,13 @@ NOWHOLE_ARCHIVE = -pthread \
 		  -lnuma \
 		  -ldl
 
-OBJS = 	main.o \
+_HDRS =	ssd_chunk.h \
+		ssd_cache.h \
+		spdk_context.h
+
+HDRS = $(patsubst %,$(HDR_DIR)/%,$(_HDRS))
+
+OBJS =	main.o \
 		ssd_chunk.o \
 		spdk_context.o
 
@@ -63,16 +71,16 @@ LIB_CMD = 	-Wl,--whole-archive $(WHOLE_ARCHIVE) \
 			-Wl,--no-whole-archive $(NOWHOLE_ARCHIVE) \
 			$(patsubst %,-L%,$(LIB_DIR))
 
-override CFLAGS += -DDEBUG -Wall -Wextra -pedantic
-#override CFLAGS += $(CFLAGS) -O3 -fomit-frame-pointer -fsanitize=address 
+#override CFLAGS += -DDEBUG -Wall -Wextra -pedantic -fsanitize=address
+override CFLAGS += -O3 -fomit-frame-pointer
 
 COMPILER = $(CXX)
 
-app: $(OBJS)
+app: $(OBJS) 
 	$(COMPILER) -o $@ $^ $(LIB_CMD) $(CFLAGS)
 
-%.o: $(SRC_DIR)/%.c $(DEPS)
-	$(COMPILER) -c -o $@ $^ $(DEP_CMD) $(LIB_CMD) $(CFLAGS)
+%.o: $(SRC_DIR)/%.c $(HDRS)
+	$(COMPILER) -c -o $@ $< $(DEP_CMD) $(LIB_CMD) $(CFLAGS)
 
 .PHONY: info, clean
 

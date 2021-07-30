@@ -19,16 +19,14 @@ main()
 	}
 
 	/* Initialize SSD NVMe controller */
-	struct ctrlr_entry *ctrlr = ctrlr_entry_init(&opts);
+	struct ctrlr_entry *ctrlr = ctrlr_entry_init(&opts, 21);
 	struct ns_entry *ns = TAILQ_FIRST(&ctrlr->ns);
 
-	uint32_t block_number = 4;
+	uint32_t block_number = MAX_CHUNK_CACHESIZE;
 	uint32_t block_size = 1 << ns->lb_order;
 
 	/* Initialize RAM storage */
-	uint64_t membuf_size = block_number;
-	membuf_size << ns->lb_order; 
-	void *membuf = spdk_dma_malloc(4 * block_size, 0, NULL);
+	void *membuf = spdk_dma_malloc(block_number * block_size, 0, NULL);
 
 	/* Initialize RAM allocator */
 	struct ssd_cache *cache = ssd_cache_init(block_number, block_size, membuf);
@@ -44,11 +42,16 @@ main()
 	/* Dump chunk info */
 	ssd_chunk_print(chunk);
 
-	/* Ordered write */
-	for (uint64_t i = 0; i < 65; i++) {
-		ssd_chunk_write_double(chunk, i, 0.1 * i);
+	{
+		uint64_t beg = spdk_get_ticks();
+		// Ordered write
+		for (uint64_t i = 0; i < capacity; i++) {
+			ssd_chunk_write_double(chunk, i, 0.1 * i);
+		}
+		uint64_t end = spdk_get_ticks();
+		printf("test ord. write: 1 GiB / %5.3e ms\n", 1.0 * (end - beg) / spdk_get_ticks_hz() * 1000);
 	}
-	
+
 	/* Free a chunk */
 	ssd_chunk_free(chunk);
 	/* Free SPDK IO queues */

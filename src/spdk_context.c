@@ -31,7 +31,7 @@ register_controller(struct spdk_nvme_ctrlr** ctrlr)
 }
 
 static int
-register_namespaces(struct ctrlr_entry *ctrlr_entry)
+register_namespaces(struct ctrlr_entry *ctrlr_entry, uint32_t lb_order)
 {
 	int ns_id, num_ns;
 	struct spdk_nvme_ns *ns;
@@ -73,14 +73,12 @@ register_namespaces(struct ctrlr_entry *ctrlr_entry)
 		}
 
 		ns_entry->ns = ns;
+		ns_entry->lb_order = lb_order;
 
 		size_t ns_size = spdk_nvme_ns_get_size(ns);
-		size_t lb_size = spdk_nvme_ns_get_sector_size(ns);
+		size_t sector_size = spdk_nvme_ns_get_sector_size(ns);
 
-		for (ns_entry->lb_order = 0; lb_size > 1; lb_size = lb_size >> 1) {
-			ns_entry->lb_order++;
-		}
-
+		ns_entry->lb_sectors = (1 << ns_entry->lb_order) / sector_size;
 		ns_entry->lb_capacity = ns_size >> ns_entry->lb_order;
 		ns_entry->lbs_occupied = 0;
 
@@ -113,7 +111,7 @@ ctrlr_entry_free(struct ctrlr_entry *ctrlr_entry)
 }
 
 struct ctrlr_entry*
-ctrlr_entry_init(struct spdk_env_opts *opts) {
+ctrlr_entry_init(struct spdk_env_opts *opts, uint32_t lb_order) {
 	
 	int rc;
 	
@@ -132,7 +130,7 @@ ctrlr_entry_init(struct spdk_env_opts *opts) {
 		return NULL;
 	}
 
-	rc = register_namespaces(ctrlr_entry);
+	rc = register_namespaces(ctrlr_entry, lb_order);
 	if (rc != 0) {
 		ctrlr_entry_free(ctrlr_entry);
 		return NULL;
