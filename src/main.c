@@ -19,7 +19,7 @@ main()
 	}
 
 	/* Initialize SSD NVMe controller */
-	struct ctrlr_entry *ctrlr = ctrlr_entry_init(&opts, 21);
+	struct ctrlr_entry *ctrlr = ctrlr_entry_init(&opts, 9);
 	struct ns_entry *ns = TAILQ_FIRST(&ctrlr->ns);
 
 	uint32_t block_number = MAX_CHUNK_CACHESIZE;
@@ -35,7 +35,7 @@ main()
 	struct spdk_nvme_qpair *qpair = spdk_nvme_ctrlr_alloc_io_qpair(ctrlr->ctrlr, NULL, 0);
 	
 	/* Initialize a chunk */
-	uint64_t capacity = 1 << 27;
+	uint64_t capacity = 1 << 20;
 
 	ssd_chunk *chunk = ssd_chunk_init(ctrlr, qpair, cache, sizeof(double) * capacity);
 	
