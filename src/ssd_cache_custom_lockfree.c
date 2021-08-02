@@ -12,12 +12,9 @@ struct ssd_cache {
 };
 
 void*
-ssd_cache_get_page(struct ssd_cache *stack, ssd_cache_handle_t handle)
+ssd_cache_get_page(ssd_cache_handle_t handle)
 {
-	unsigned char *const byte_buf = stack->membuf;
-	uint64_t index = stack->block_size;
-	index *= handle->entry;
-	return (void*)(byte_buf + index);
+	return handle->entry;
 }
 
 struct ssd_cache*
@@ -42,15 +39,15 @@ ssd_cache_init(uint32_t nb_blocks, uint32_t block_size, void *membuf)
 
 		head = atomic_load_explicit(&stack->head, memory_order_relaxed);
 
+		char *bytebuf = (char*)membuf;
 		for (uint32_t i = 0; i < nb_blocks - 1; i++) {
-			head->entry = i;
+			head->entry = (void*)(bytebuf + i * block_size);
 			head->next = head + 1;
 			head = head->next;
 		}
 
-		head->entry = nb_blocks - 1;
+		head->entry = (void*)(bytebuf + (nb_blocks - 1) * block_size);
 		head->next = NULL;
-
 	}
 
 	return stack;
@@ -112,7 +109,7 @@ ssd_cache_empty(struct ssd_cache *stack)
 }
 
 int
-ssd_cache_valid_handle(struct ssd_cache *stack, ssd_cache_handle_t handle)
+ssd_cache_valid_handle(ssd_cache_handle_t handle)
 {	
 	return handle != 0;
 }

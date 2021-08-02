@@ -29,7 +29,7 @@ ssd_chunk_print(const struct ssd_chunk *chunk)
     printf("\t actual cache size: %u lines\n", chunk->local_cache.actual_size);
     printf("\t blocks in cache:\n");
     for (uint8_t i = 0; i < chunk->local_cache.actual_size; i++) {
-        void* buf = ssd_cache_get_page(chunk->global_cache, chunk->local_cache.lbs[i]);
+        void* buf = ssd_cache_get_page(chunk->local_cache.lbs[i]);
         printf("\t\t line %u block %u address %p ", i, chunk->local_cache.ids[i], buf);
         printf("pending ? %c\n", chunk->local_cache.pending[i] == 1 ? 'y' : 'n');
     }
@@ -56,7 +56,7 @@ ssd_chunk_free(struct ssd_chunk *chunk)
 
         ssd_cache_handle_t handle = cache->lbs[k];
 
-        if (ssd_cache_valid_handle(chunk->global_cache, handle)) {
+        if (ssd_cache_valid_handle(handle)) {
             ssd_cache_push(chunk->global_cache, handle);
         }
     }
@@ -100,7 +100,7 @@ ssd_chunk_init(struct ctrlr_entry       *ctrlr,
 
                 ssd_cache_handle_t handle = ssd_cache_pop(chunk->global_cache);
                 
-                if (ssd_cache_valid_handle(chunk->global_cache, handle)) {
+                if (ssd_cache_valid_handle(handle)) {
                     chunk->local_cache.lbs[size] = handle;
                     chunk->local_cache.ids[size] = size;
                     chunk->local_cache.pending[k] = 0;
@@ -170,7 +170,7 @@ sync_load_lb(struct ssd_chunk *chunk, uint32_t id)
     cache->pending[cache->curr_cacheline] = 1;
     int rc = spdk_nvme_ns_cmd_read(chunk->ns->ns,
                                 chunk->qpair,
-                                ssd_cache_get_page(chunk->global_cache, handle),
+                                ssd_cache_get_page(handle),
                                 chunk->lb_offset + id * chunk->ns->lb_sectors,
                                 chunk->ns->lb_sectors,
                                 complete,
@@ -201,7 +201,7 @@ async_flush_lb(struct ssd_chunk *chunk, uint8_t cacheline)
 
     return spdk_nvme_ns_cmd_write(chunk->ns->ns,
                                 chunk->qpair,
-                                ssd_cache_get_page(chunk->global_cache, handle),
+                                ssd_cache_get_page(handle),
                                 chunk->lb_offset + id * chunk->ns->lb_sectors,
                                 chunk->ns->lb_sectors,
                                 complete,
@@ -218,7 +218,7 @@ force_cache_update(struct ssd_chunk *chunk, uint32_t id) {
 
         ssd_cache_handle_t handle = ssd_cache_pop(chunk->global_cache);
 
-        if (ssd_cache_valid_handle(chunk->global_cache, handle)) {
+        if (ssd_cache_valid_handle(handle)) {
 
             cache->lbs[cache->actual_size] = handle;
             cache->ids[cache->actual_size] = id;
@@ -247,7 +247,7 @@ fetch_lb(struct ssd_chunk *chunk, uint32_t new_id)
 
     uint8_t  old_cacheline = cache->curr_cacheline;
     uint32_t old_id = cache->ids[old_cacheline];
-    void*    old_lb = ssd_cache_get_page(chunk->global_cache, cache->lbs[old_cacheline]);
+    void*    old_lb = ssd_cache_get_page(cache->lbs[old_cacheline]);
     
     if (old_id == new_id) {
         return old_lb;
@@ -267,7 +267,7 @@ fetch_lb(struct ssd_chunk *chunk, uint32_t new_id)
             return NULL;
         }
         
-        return ssd_cache_get_page(chunk->global_cache, cache->lbs[0]);
+        return ssd_cache_get_page(cache->lbs[0]);
     }
 
     uint8_t new_cacheline = search_cacheline(cache, new_id);
@@ -290,7 +290,7 @@ fetch_lb(struct ssd_chunk *chunk, uint32_t new_id)
         return NULL;
     }
 
-    return ssd_cache_get_page(chunk->global_cache, cache->lbs[cache->curr_cacheline]);
+    return ssd_cache_get_page(cache->lbs[cache->curr_cacheline]);
 }
 
 double

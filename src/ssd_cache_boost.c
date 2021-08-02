@@ -11,12 +11,9 @@ struct ssd_cache {
 };
 
 void*
-ssd_cache_get_page(struct ssd_cache *cache, ssd_cache_handle_t handle)
+ssd_cache_get_page(ssd_cache_handle_t handle)
 {
-	unsigned char *const byte_buf = static_cast<unsigned char*>(cache->membuf);
-	uint64_t index = cache->block_size;
-	index *= handle;
-	return (void*)(byte_buf + index);
+	return handle;
 }
 
 struct ssd_cache*
@@ -31,8 +28,10 @@ ssd_cache_init(uint32_t nb_blocks, uint32_t block_size, void *membuf)
 		cache->nb_blocks = nb_blocks;
 		cache->block_size = block_size;
 
-		for (ssd_cache_handle_t i = 0; i < nb_blocks; i++) {
-			cache->st->unsynchronized_push(i);
+		char *bytebuf = (char*)membuf;
+		for (uint32_t i = 0; i < nb_blocks; i++) {
+			void *addr = (void*)(bytebuf + i * block_size);
+			cache->st->unsynchronized_push(addr);
 		}
 	}
 
@@ -53,7 +52,7 @@ ssd_cache_pop(struct ssd_cache *cache)
 	if (cache->st->pop(value)) {
 		return value;
 	} else {
-		return cache->nb_blocks;
+		return NULL;
 	}
 }
 
@@ -70,7 +69,7 @@ ssd_cache_empty(struct ssd_cache *cache)
 }
 
 int
-ssd_cache_valid_handle(struct ssd_cache *cache, ssd_cache_handle_t handle)
+ssd_cache_valid_handle(ssd_cache_handle_t handle)
 {	
-	return handle < cache->nb_blocks;
+	return handle != 0;
 }

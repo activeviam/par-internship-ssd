@@ -16,22 +16,22 @@ struct ssd_cache;
 #ifdef CUSTOM_LOCKFREE
 struct ssd_cache_node {
 	struct ssd_cache_node 	*next;
-	uint32_t				entry;
+	void					*entry;
 };
 
 typedef struct ssd_cache_node *ssd_cache_handle_t;
 #endif
 
 #ifdef CUSTOM_SPINLOCK
-typedef uint32_t ssd_cache_handle_t;
+typedef void* ssd_cache_handle_t;
 #endif
 
 #ifdef BOOST
-typedef uint32_t ssd_cache_handle_t;
+typedef void* ssd_cache_handle_t;
 #endif
 
 void*
-ssd_cache_get_page(struct ssd_cache *stack, ssd_cache_handle_t handle);
+ssd_cache_get_page(ssd_cache_handle_t handle);
 
 struct ssd_cache*
 ssd_cache_init(uint32_t block_number, uint32_t block_size, void *membuf);
@@ -49,7 +49,7 @@ int
 ssd_cache_empty(struct ssd_cache *stack);
 
 int
-ssd_cache_valid_handle(struct ssd_cache *stack, ssd_cache_handle_t handle);
+ssd_cache_valid_handle(ssd_cache_handle_t handle);
 
 #ifdef __cplusplus
 }
