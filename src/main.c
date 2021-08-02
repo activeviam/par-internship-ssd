@@ -19,7 +19,7 @@ main()
 	}
 
 	/* Initialize SSD NVMe controller */
-	struct ctrlr_entry *ctrlr = ctrlr_entry_init(&opts, 19);
+	struct ctrlr_entry *ctrlr = ctrlr_entry_init(&opts, 21);
 	struct ns_entry *ns = TAILQ_FIRST(&ctrlr->ns);
 
 	uint32_t block_number = MAX_CHUNK_CACHESIZE;

@@ -20,12 +20,12 @@ struct ssd_lbid {
 };
 
 struct ssd_chunk {
-	uint64_t				capacity;
 	struct ns_entry			*ns;
 	struct spdk_nvme_qpair	*qpair;
 	struct ssd_cache		*global_cache;
 	ssd_chunk_cache			local_cache;
 	uint32_t				lb_offset;
+	uint32_t				capacity;
 };
 
 struct ssd_chunk*
@@ -45,5 +45,8 @@ ssd_chunk_free(struct ssd_chunk *chunk);
 
 void
 ssd_chunk_print(const struct ssd_chunk *chunk);
+
+void
+ssd_chunk_sync(struct ssd_chunk *chunk);
 
 #endif

@@ -36,9 +36,9 @@ ssd_chunk_print(const struct ssd_chunk *chunk)
 }
 
 void
-ssd_chunk_free(struct ssd_chunk *chunk)
+ssd_chunk_sync(struct ssd_chunk *chunk)
 {
-    int is_cache_pending;
+	int is_cache_pending;
 
     struct ssd_chunk_cache *cache = &chunk->local_cache;
 
@@ -52,7 +52,16 @@ ssd_chunk_free(struct ssd_chunk *chunk)
         }
     } while (is_cache_pending);
 
-    for (uint8_t k = 0; k < cache->actual_size; k++) {
+}
+
+void
+ssd_chunk_free(struct ssd_chunk *chunk)
+{
+    struct ssd_chunk_cache *cache = &chunk->local_cache;
+
+	ssd_chunk_sync(chunk);
+
+   	for (uint8_t k = 0; k < cache->actual_size; k++) {
 
         ssd_cache_handle_t handle = cache->lbs[k];
 
