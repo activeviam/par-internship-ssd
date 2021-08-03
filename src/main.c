@@ -19,7 +19,7 @@ main()
 	}
 
 	/* Initialize SSD NVMe controller */
-	struct ctrlr_entry *ctrlr = ctrlr_entry_init(&opts, 21);
+	struct ctrlr_entry *ctrlr = ctrlr_entry_init(&opts, 19);
 	struct ns_entry *ns = TAILQ_FIRST(&ctrlr->ns);
 
 	uint32_t block_number = MAX_CHUNK_CACHESIZE;
@@ -42,10 +42,12 @@ main()
 	ssd_chunk_print(chunk);
 
 	double avg = 0;
+	double rec;
+
 	for (int num_iter = 0; num_iter < 10; num_iter++) {
 		uint64_t beg = spdk_get_ticks();
 		for (uint64_t i = 0; i < capacity; i++) {
-			ssd_chunk_write_double(chunk, i, 0.1 * i);
+			rec = ssd_chunk_read_double(chunk, i);
 		}
 		ssd_chunk_sync(chunk);
 		uint64_t end = spdk_get_ticks();
