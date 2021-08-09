@@ -19,7 +19,7 @@ main()
 	}
 
 	/* Initialize SSD NVMe controller */
-	struct ctrlr_entry *ctrlr = ctrlr_entry_init(&opts, 19);
+	struct ctrlr_entry *ctrlr = ctrlr_entry_init(&opts, 21);
 	struct ns_entry *ns = TAILQ_FIRST(&ctrlr->ns);
 
 	uint32_t block_number = MAX_CHUNK_CACHESIZE;
@@ -35,37 +35,43 @@ main()
 	struct spdk_nvme_qpair *qpair = spdk_nvme_ctrlr_alloc_io_qpair(ctrlr->ctrlr, NULL, 0);
 	
 	/* Initialize a chunk */
-	uint64_t capacity = 1 << 27;
+	uint64_t capacity = 1 << 21;
 
 	/* Setup */
-	ssd_chunk *chunk = ssd_chunk_init(ctrlr, qpair, cache, sizeof(double) * capacity);
-	
+	ssd_chunk *chunk = ssd_chunk_init(ctrlr, qpair, cache, sizeof(double) * capacity);	
+
 	for (uint64_t i = 0; i < capacity; i++) {
-		ssd_chunk_write_double(chunk, i, 0.);
+		ssd_chunk_write_double(chunk, i, 42.);
 	}
+	ssd_chunk_sync(chunk);
 
 	double avg = 0;
 	double rec;
 
 	/* Tests */
-	for (int num_iter = 0; num_iter < 10; num_iter++) {
+	for (int num_iter = 0; num_iter < 1; num_iter++) {
 		uint64_t beg = spdk_get_ticks();
-		for (uint64_t i = 0; i < capacity; i++) {
-			rec = ssd_chunk_read_double(chunk, i);
+		for (uint64_t i = 0, j = 0; i < 10; i++) {
+			j = (j + 99999) % capacity;
+			rec = ssd_chunk_read_double(chunk, j);
 		}
 		ssd_chunk_sync(chunk);
 		uint64_t end = spdk_get_ticks();
 		
 		double duration = 1.0 * (end - beg) / spdk_get_ticks_hz() * 100;
-		printf("test ord. write #%d, speed = 1 GiB / %5.5e ms\n", num_iter, duration * 10);
+		printf("test ord. read #%d, speed = 1 GiB / %5.5e ms\n", num_iter, duration * 10);
 		
 		if (num_iter >= 5) {
 			avg += duration * 2;
 		}
 	}
-	printf("test ord. write: average speed = 1 GiB / %5.3e ms\n", avg);
+	printf("test ord. read: average speed = 1 GiB / %5.3e ms\n", avg);
 
-	//ssd_chunk_print(chunk);
+	if (rec != 42.) {
+		fprintf(stderr, "error, rec = %f\n", rec);
+	}
+
+	ssd_chunk_print(chunk);
 
 	/* Free a chunk */
 	ssd_chunk_free(chunk);
@@ -80,3 +86,47 @@ main()
 
 	return 0;
 }
+/*
+		for (uint64_t i = len; i < 2 * len; i++) {
+			ssd_chunk_write_double(chunk, i, 42.);
+		}ssd_chunk_print(chunk);
+
+		for (uint64_t i = 2 * len; i < 3 * len; i++) {
+			ssd_chunk_write_double(chunk, i, 42.);
+		}ssd_chunk_print(chunk);
+
+		for (uint64_t i = 3 * len; i < 4 * len; i++) {
+			ssd_chunk_write_double(chunk, i, 42.);
+		}ssd_chunk_print(chunk);
+
+		for (uint64_t i = 4 * len; i < 5 * len; i++) {
+			ssd_chunk_write_double(chunk, i, 42.);
+		}ssd_chunk_print(chunk);
+
+		for (uint64_t i = 5 * len; i < 6 * len; i++) {
+			ssd_chunk_write_double(chunk, i, 42.);
+		}ssd_chunk_print(chunk);
+
+		for (uint64_t i = 6 * len; i < 7 * len; i++) {
+			ssd_chunk_write_double(chunk, i, 42.);
+		}ssd_chunk_print(chunk);
+		for (uint64_t i = 7 * len; i < 8 * len; i++) {
+			ssd_chunk_write_double(chunk, i, 42.);
+		}ssd_chunk_print(chunk);
+
+		for (uint64_t i = 8 * len; i < 9 * len; i++) {
+			ssd_chunk_write_double(chunk, i, 42.);
+		}ssd_chunk_print(chunk);
+
+		for (uint64_t i = 9 * len; i < 10 * len; i++) {
+			ssd_chunk_write_double(chunk, i, 42.);
+		}ssd_chunk_print(chunk);
+
+		for (uint64_t i = 10 * len; i < 11 * len; i++) {
+			ssd_chunk_write_double(chunk, i, 42.);
+		}ssd_chunk_print(chunk);
+
+		for (uint64_t i = 11 * len; i < 12 * len; i++) {
+			ssd_chunk_write_double(chunk, i, 42.);
+		}ssd_chunk_print(chunk);
+*/

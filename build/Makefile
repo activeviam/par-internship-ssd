@@ -71,8 +71,8 @@ LIB_CMD = 	-Wl,--whole-archive $(WHOLE_ARCHIVE) \
 			-Wl,--no-whole-archive $(NOWHOLE_ARCHIVE) \
 			$(patsubst %,-L%,$(LIB_DIR))
 
-#override CFLAGS += -DDEBUG -Wall -Wextra -pedantic -fsanitize=address
-override CFLAGS += -O3 -fomit-frame-pointer
+override CFLAGS += -DDEBUG -Wall -Wextra -pedantic -fsanitize=address
+#override CFLAGS += -O3 -fomit-frame-pointer
 
 COMPILER = $(CXX)
 

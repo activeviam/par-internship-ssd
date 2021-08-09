@@ -4,7 +4,7 @@
 #include <ssd_cache.h>
 #include <stdint.h>
 
-#define MAX_CHUNK_CACHESIZE 4
+#define MAX_CHUNK_CACHESIZE 16
 
 struct ssd_chunk_cache {
 	ssd_cache_handle_t	lbs[MAX_CHUNK_CACHESIZE];
@@ -12,6 +12,7 @@ struct ssd_chunk_cache {
 	uint8_t				pending[MAX_CHUNK_CACHESIZE];
 	uint8_t				actual_size;
 	uint8_t				curr_cacheline;
+	uint8_t				hit_prediction_rate;
 };
 
 struct ssd_lbid {
@@ -32,7 +33,8 @@ struct ssd_chunk*
 ssd_chunk_init(struct ctrlr_entry 		*ctrlr,
 			   struct spdk_nvme_qpair 	*qpair,
 			   struct ssd_cache			*cache,
-			   uint64_t 				capacity);
+			   uint64_t 				capacity,
+			   uint8_t					initial_hpr = 100);
 
 double
 ssd_chunk_read_double(struct ssd_chunk *chunk, uint64_t pos);

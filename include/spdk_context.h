@@ -3,6 +3,7 @@
 #include <spdk/stdinc.h>
 #include <spdk/nvme.h>
 #include <spdk/env.h>
+#include <spdk/likely.h>
 
 struct ns_entry {
 	TAILQ_ENTRY(ns_entry) 	link;
