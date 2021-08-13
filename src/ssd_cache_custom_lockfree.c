@@ -1,32 +1,33 @@
 #include <ssd_cache.h>
 #include <stdatomic.h>
 
-struct ssd_cache {
-	
-	_Atomic ssd_cache_handle_t 	head;
-	ssd_cache_handle_t			stackarray;
+struct ssd_cache_node {
+	void					*entry;
+	struct ssd_cache_node 	*next;
+} *ssd_cache_nodeptr_t;
 
-	void 						*membuf;
-	uint32_t					nb_blocks;
-	uint32_t					block_size;
+struct ssd_cache {
+	struct ssd_cache_info		info;
+	_Atomic ssd_cache_nodeptr_t head;
+	ssd_cache_nodeptr_t 		stackarray;
 };
 
-void*
-ssd_cache_get_page(ssd_cache_handle_t handle)
+const struct ssd_cache_info*
+ssd_cache_get_info(ssd_cache *cache)
 {
-	return handle->entry;
+	return &cache->info;
 }
 
 struct ssd_cache*
-ssd_cache_init(uint32_t nb_blocks, uint32_t block_size, void *membuf)
+ssd_cache_init(uint32_t block_order, uint32_t block_size, void *membuf)
 {
 	struct ssd_cache *stack = malloc(sizeof(struct ssd_cache));
 	
 	if (stack) {
 
-		stack->membuf = membuf;
-		stack->nb_blocks = nb_blocks;
-		stack->block_size = block_size;
+		stack->info.membuf = membuf;
+		stack->info.block_number = block_number;
+		stack->info.block_order = block_order;
 
 		stack->stackarray = malloc(nb_blocks * sizeof(struct ssd_cache_node));
 		atomic_store_explicit(&stack->head, stack->stackarray, memory_order_relaxed);
@@ -40,13 +41,14 @@ ssd_cache_init(uint32_t nb_blocks, uint32_t block_size, void *membuf)
 		head = atomic_load_explicit(&stack->head, memory_order_relaxed);
 
 		char *bytebuf = (char*)membuf;
-		for (uint32_t i = 0; i < nb_blocks - 1; i++) {
+		uint32_t block_size = 1 << block_number;
+		for (uint32_t i = 0; i < block_number - 1; i++) {
 			head->entry = (void*)(bytebuf + i * block_size);
 			head->next = head + 1;
 			head = head->next;
 		}
 
-		head->entry = (void*)(bytebuf + (nb_blocks - 1) * block_size);
+		head->entry = (void*)(bytebuf + (block_number - 1) * block_size);
 		head->next = NULL;
 	}
 
@@ -63,10 +65,10 @@ ssd_cache_free(struct ssd_cache *stack)
 	free(stack);
 }
 
-ssd_cache_handle_t
+void*
 ssd_cache_pop(struct ssd_cache *stack)
 {
-	ssd_cache_handle_t old_head, new_head;
+	ssd_cache_nodeptr_t old_head, new_head;
 	
 	do {
 		old_head = atomic_load_explicit(&stack->head, memory_order_acquire);
@@ -82,13 +84,18 @@ ssd_cache_pop(struct ssd_cache *stack)
 			memory_order_release,
 			memory_order_relaxed));
 
-	return old_head;
+	void *entry = old_head->entry;
+	old_head->entry = NULL;
+	return entry;
 }
 
 void
-ssd_cache_push(struct ssd_cache *stack, ssd_cache_handle_t new_head)
+ssd_cache_push(struct ssd_cache *stack, void *new_head_entry)
 {	
-	ssd_cache_handle_t old_head;
+	ssd_cache_nodeptr_t old_head, new_head;
+
+	uint64_t offset = (uint64_t)new_head_entry - (uint64_t)stack->info.membuf;
+	new_head = stack->stackarray + (offset / sizeof(struct ssd_cache_node);
 	
 	do {
 		old_head = atomic_load_explicit(&stack->head, memory_order_acquire);
@@ -107,10 +114,3 @@ ssd_cache_empty(struct ssd_cache *stack)
 {
 	return stack->head == NULL;
 }
-
-int
-ssd_cache_valid_handle(ssd_cache_handle_t handle)
-{	
-	return handle != 0;
-}
-

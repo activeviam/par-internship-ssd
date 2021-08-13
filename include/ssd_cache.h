@@ -1,4 +1,5 @@
 #ifndef __SSD_CACHE_H__
+#define __SSD_CACHE_H__
 
 #ifdef __cplusplus
 extern "C" {
@@ -7,49 +8,31 @@ extern "C" {
 #include <stdlib.h>
 #include <stdint.h>
 
-struct ssd_cache;
-
-#ifdef INTELTBB
-	#include <ssd_inteltbb_cache.h>
-#endif
-
-#ifdef CUSTOM_LOCKFREE
-struct ssd_cache_node {
-	struct ssd_cache_node 	*next;
-	void					*entry;
+struct ssd_cache_info {
+	void		*membuf;
+	uint32_t 	block_number;
+	uint32_t 	block_order;
 };
 
-typedef struct ssd_cache_node *ssd_cache_handle_t;
-#endif
+struct ssd_cache;
 
-#ifdef CUSTOM_SPINLOCK
-typedef void* ssd_cache_handle_t;
-#endif
-
-#ifdef BOOST
-typedef void* ssd_cache_handle_t;
-#endif
-
-void*
-ssd_cache_get_page(ssd_cache_handle_t handle);
+const struct ssd_cache_info*
+ssd_cache_get_info(ssd_cache *cache);
 
 struct ssd_cache*
-ssd_cache_init(uint32_t block_number, uint32_t block_size, void *membuf);
+ssd_cache_init(uint32_t block_number, uint32_t block_order, void *membuf);
 
 void
-ssd_cache_free(struct ssd_cache *stack);
+ssd_cache_free(struct ssd_cache *cache);
 
 void
-ssd_cache_push(struct ssd_cache *stack, ssd_cache_handle_t new_head);
+ssd_cache_push(struct ssd_cache *cache, void *new_head);
 
-ssd_cache_handle_t
-ssd_cache_pop(struct ssd_cache *stack);
-
-int
-ssd_cache_empty(struct ssd_cache *stack);
+void*
+ssd_cache_pop(struct ssd_cache *cache);
 
 int
-ssd_cache_valid_handle(ssd_cache_handle_t handle);
+ssd_cache_empty(struct ssd_cache *cache);
 
 #ifdef __cplusplus
 }
