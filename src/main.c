@@ -9,7 +9,7 @@
 
 #define NUM_THREADS 1U
 #define QUEUE_DEPTH 64U
-#define IO_BLOCK_ORDER 20U
+#define IO_BLOCK_ORDER 9U
 
 int
 main()
@@ -37,7 +37,7 @@ main()
 	}
 
 	// Setup
-	uint32_t n = 1 << 22;
+	uint32_t n = 1 << 26;
 	off_t capacity = n * sizeof(double);
 	ssd_chunk *chunk = ssd_chunk_init(&uring, &storage, ram_cache, capacity);
 	
@@ -63,7 +63,7 @@ main()
 	for (int num_iter = 0; num_iter < 10; num_iter++) {
 		clock_t beg = clock();
 		for (uint64_t i = 0, j = 0; i < n; i++) {
-			j = (j + 999999) % capacity;
+			j = (j + 999999) % n;
 			rec = ssd_chunk_read_double(chunk, j);
 		}
 		ssd_chunk_sync(chunk);
