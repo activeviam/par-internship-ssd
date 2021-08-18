@@ -47,8 +47,8 @@ struct ssd_chunk {
 	uint32_t				cache_ids[CHUNK_CACHE_MAXSIZE];
 	uint8_t					cache_pending[CHUNK_CACHE_MAXSIZE];
 
-	TAILQ_HEAD(io_batch_head, io_batch)	write_queue_entries;
-	uint8_t								write_queue_size;
+	//TAILQ_HEAD(io_batch_head, io_batch)	write_queue_entries;
+	//uint8_t								write_queue_size;
 };
 
 struct ssd_chunk*

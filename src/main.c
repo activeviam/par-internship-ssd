@@ -9,7 +9,7 @@
 
 #define NUM_THREADS 1U
 #define QUEUE_DEPTH 32U
-#define IO_BLOCK_ORDER 20U
+#define IO_BLOCK_ORDER 9U
 
 int
 main()
@@ -48,13 +48,14 @@ main()
 		for (uint64_t i = k * len; i < (k+1) * len; i++) {
 			ssd_chunk_write_double(chunk, i, 42.);
 		}ssd_chunk_print(chunk);
-	}*/
+	}
+	*/
 
 	for (uint64_t i = 0; i < n; i++) {
 		ssd_chunk_write_double(chunk, i, 42.);
 	}
 	ssd_chunk_sync(chunk);
-	//ssd_chunk_print(chunk);
+	ssd_chunk_print(chunk);
 	
 	double avg = 0;
 	double rec;
@@ -63,7 +64,7 @@ main()
 	for (int num_iter = 0; num_iter < 10; num_iter++) {
 		clock_t beg = clock();
 		for (uint64_t i = 0, j = 0; i < n; i++) {
-			j = (i & 1) * 999999;
+			j = (j + 999999) % n;
 			rec = ssd_chunk_read_double(chunk, j);
 		}
 		ssd_chunk_sync(chunk);
@@ -76,6 +77,7 @@ main()
 			avg += duration * 2;
 		}
 	}
+
 	printf("test ord. read: average speed = 1 GiB / %5.3e ms = %5.3e GiB / s\n", avg, 1000. / avg);
 
 	if (rec != 42.) {
