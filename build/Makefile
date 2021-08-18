@@ -29,8 +29,8 @@ endif
 
 DEP_CMD = $(patsubst %,-I%,$(DEP_DIR))
 
-#override CFLAGS += -DDEBUG -Wall -Wextra -pedantic -fsanitize=address
-override CFLAGS += -O3 -fomit-frame-pointer
+override CFLAGS += -g -DDEBUG -Wall -Wextra -pedantic -fsanitize=address
+#override CFLAGS += -O3 -fomit-frame-pointer
 
 COMPILER = $(CXX)
 

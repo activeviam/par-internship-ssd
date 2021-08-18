@@ -6,12 +6,13 @@
 #define INT_ORDER		2
 #define DOUBLE_ORDER	3
 
-#define ASYNC	0
-#define SYNC	1
+#define ASYNC			0
+#define SYNC			1
 
 #define READY			0
 #define	PENDING_STORE	1
 #define PENDING_LOAD	2
+#define BUSY			3
 
 static inline int64_t min(int64_t a, int64_t b) { return a < b ? a : b ; }
 static inline int64_t max(int64_t a, int64_t b) { return a > b ? a : b ; }
@@ -30,17 +31,15 @@ update_prediction_rate(struct ssd_chunk *chunk, const uint32_t old_id, const uin
 	chunk->cache_prediction_rate = (uint8_t)hit_prediction_rate;
 }
 
-struct ioid {
+struct io_id {
 	uint32_t index;
 	uint32_t offset;
 };
 
-static struct ioid
-get_ioid(uint64_t pos, uint32_t order)
+static struct io_id
+get_io_id(uint64_t pos, uint32_t order)
 {
-    struct ioid res;
-    res.index = (pos >> order);
-    res.offset = pos ^ (res.index << order);
+    struct io_id res = {pos >> order, pos ^ (res.index << order)};
     return res;
 }
 
@@ -67,7 +66,6 @@ ssd_chunk_print(const struct ssd_chunk *chunk)
         printf("pending ? %c\n", stat == READY ? 'n' : stat == PENDING_STORE ? 'w' : 'r');
     }
 }
-
 
 void
 ssd_chunk_free(struct ssd_chunk *chunk)
@@ -131,10 +129,10 @@ ssd_chunk_init(struct io_uring 		*uring,
 
 	chunk->cache_current_line = 0;
 	chunk->cache_prediction_rate = initial_hpr;
-	chunk->cache_timeout = 0;
+	chunk->cache_usage = 0;
 
 	uint8_t cachesize = 0; 
-	uint8_t max_cachesize = min(ios_needed, MAX_CHUNK_CACHESIZE);
+	uint8_t max_cachesize = min(ios_needed, CHUNK_CACHE_MAXSIZE);
 
 	for (uint8_t k = 0; k < max_cachesize; k++) {
 
@@ -162,6 +160,9 @@ ssd_chunk_init(struct io_uring 		*uring,
 		free(chunk);
 	}
 
+	TAILQ_INIT(&chunk->write_queue_entries);
+	chunk->write_queue_size = 0;
+
 	return chunk;
 }
 
@@ -179,10 +180,23 @@ search_cacheline(struct ssd_chunk *chunk, uint32_t id)
 }
 
 static void
-process_data(ssd_chunk *chunk, uint64_t cacheline)
+process_data(ssd_chunk *chunk, uint64_t cache_data)
 {
 	//if (chunk->cache_pending[(uint8_t)cacheline] == PENDING_STORE) {}
-	chunk->cache_pending[(uint8_t)cacheline] = READY;
+
+	if (cache_data < 255) {
+		chunk->cache_pending[(uint8_t)cache_data] = READY;
+		chunk->cache_usage--;
+	} else {
+		uint8_t *cachelines = (uint8_t*)cache_data;
+		struct iovec* iovec = *(struct iovec**)(void*)(cachelines + 1);
+		for (uint8_t k = 1 + sizeof(struct iovec*); k <= cachelines[0] + sizeof(struct iovec*); k++) {
+			chunk->cache_pending[cachelines[k]] = READY;
+		}
+		chunk->cache_usage -= cachelines[0];
+		free(cachelines);
+		free(iovec);
+	}
 }
 
 static int
@@ -198,7 +212,7 @@ process_completions(struct ssd_chunk *chunk, uint8_t counter = 0)
 		if (cqe->res < 0) {
 			fprintf(stderr, "error in completion %u: data = %lld, res = %d\n", head, cqe->user_data, cqe->res);
 			return -1;
-		} 
+		}
 		process_data(chunk, cqe->user_data);
 		io_uring_cqe_seen(chunk->uring, cqe);
 
@@ -210,24 +224,6 @@ process_completions(struct ssd_chunk *chunk, uint8_t counter = 0)
 	return 0;
 }
 
-void
-ssd_chunk_sync(struct ssd_chunk *chunk)
-{ 
-	uint8_t cache_pending;
-
-    do {
-
-		process_completions(chunk);
-
-		cache_pending = 0;
-        for (uint8_t k = 0; k < chunk->cache_actual_size; k++) {
-            if (chunk->cache_pending[k]) {
-                cache_pending = 1;
-            }
-        }
-
-    } while (cache_pending);
-}
 
 static int
 load_io(struct ssd_chunk *chunk, const uint32_t value, const uint8_t cacheline, const uint8_t sync_flag)
@@ -256,9 +252,185 @@ load_io(struct ssd_chunk *chunk, const uint32_t value, const uint8_t cacheline, 
     return 0;
 }
 
+static struct io_block*
+write_queue_push_block(struct ssd_chunk *chunk, const uint32_t id, const uint8_t cacheline)
+{
+	struct io_batch *batch, *batch_tmp;
+	struct ssd_chunk::io_batch_head *head = &chunk->write_queue_entries;
+    
+	for (batch = TAILQ_FIRST(head); batch != NULL; batch = batch_tmp) {
+    	
+		batch_tmp = TAILQ_NEXT(batch, link);
+
+		struct io_block *first = TAILQ_FIRST(&batch->blocks);
+		struct io_block *first_tmp = NULL;
+		if (batch_tmp) {
+			first_tmp = TAILQ_FIRST(&batch_tmp->blocks);
+		}
+
+			
+		// the block can be appended to the left of the current batch
+		if (id == first->id - 1) {
+			struct io_block *block = (struct io_block*)malloc(sizeof(struct io_block));
+			block->id = id;
+			block->cacheline = cacheline;
+			TAILQ_INSERT_HEAD(&batch->blocks, block, link);
+			batch->size++;
+			return block;
+		}
+
+		// the block can be appended to the right of the current batch
+		if (id == first->id + batch->size) {
+			struct io_block *block = (struct io_block*)malloc(sizeof(struct io_block));
+			block->id = id;
+			block->cacheline = cacheline;
+			TAILQ_INSERT_TAIL(&batch->blocks, block, link);
+			batch->size++;
+
+			// coalescing may appear if there was a 1-element space between 2 consecutive
+			// batches before the last insertion
+			if (first_tmp && id == first_tmp->id - 1) {
+				TAILQ_CONCAT(&batch->blocks, &batch_tmp->blocks, link);
+				batch->size += batch_tmp->size;
+				batch = batch_tmp;
+				batch_tmp = TAILQ_NEXT(batch_tmp, link);
+				TAILQ_REMOVE(head, batch, link);
+			}
+
+			return block;
+		}
+		
+		// there is no batch to append to, procedd to batch creation
+		if (id > first->id + batch->size && (!first_tmp || id < first_tmp->id - 1)) {
+			break;
+		}
+
+		// the block is already in the queue
+		if (id >= first->id && id < first->id + batch->size) {
+			uint8_t nb_steps = id - first->id;
+			while (nb_steps--) {
+				first = TAILQ_NEXT(first, link);
+			}
+			return first;
+		}
+    }	
+
+
+	// at this point it is obvious that the new block cannot be appended to any existing
+	// batch, and it should be inserted between the "batch" and the "batch_tmp"
+	// create new batch
+	struct io_batch *new_batch = (struct io_batch*)malloc(sizeof(struct io_batch));
+	new_batch->size = 1;
+	TAILQ_INIT(&new_batch->blocks);
+
+	// at this point with a single block
+	struct io_block *new_block = (struct io_block*)malloc(sizeof(struct io_block));
+	new_block->id = id;
+	new_block->cacheline = cacheline;
+
+	TAILQ_INSERT_HEAD(&new_batch->blocks, new_block, link);
+	// add the new batch at suitable position in queue with respect to the block numeration
+	
+	if (batch) {
+		TAILQ_INSERT_AFTER(head, batch, new_batch, link);
+	} else {
+		TAILQ_INSERT_HEAD(head, new_batch, link);
+	}
+
+	chunk->write_queue_size++;
+	return new_block;
+}
+
+static int
+write_queue_pop_batch(struct ssd_chunk *chunk)
+{
+	uint32_t len = chunk->cache_iovecs[0].iov_len;
+
+	struct io_batch *batch = TAILQ_FIRST(&chunk->write_queue_entries);
+	uint8_t size = batch->size;
+
+	struct io_batch::io_block_head *head = &batch->blocks;
+	struct io_block *block, *block_tmp;
+
+	struct iovec *iovecs = (struct iovec*)malloc(batch->size * sizeof(struct iovec));
+	uint8_t *cachelines = (uint8_t*)malloc(batch->size + 1 + sizeof(struct iovec*));
+	cachelines[0] = batch->size;
+	struct iovec **ptr_to_vec = (struct iovec**)(void*)(cachelines + 1);
+	*ptr_to_vec = iovecs;
+
+	uint8_t k = 0;
+	block = TAILQ_FIRST(head);
+
+	uint64_t offset = (uint64_t)block->id * len;
+
+	for (; block != NULL; block = block_tmp) {
+		
+		block_tmp = TAILQ_NEXT(block, link);
+		
+		iovecs[k].iov_base = chunk->cache_iovecs[block->cacheline].iov_base;
+		iovecs[k].iov_len = len;
+
+		cachelines[k + 1 + sizeof(struct iovec*)] = block->cacheline;
+
+		k++;
+
+		TAILQ_REMOVE(head, block, link);
+		free(block);
+	}
+
+	TAILQ_REMOVE(&chunk->write_queue_entries, batch, link);
+	free(batch);
+	chunk->write_queue_size--;
+	
+	struct io_uring_sqe *sqe = io_uring_get_sqe(chunk->uring);
+	if (uring_unlikely(!sqe)) {
+		fprintf(stderr, "unable to get sqe instance\n");
+		return -1;
+	}
+
+	io_uring_prep_writev(sqe, chunk->fd, iovecs, size, offset);
+	io_uring_sqe_set_data(sqe, (void*)cachelines);
+	
+	int rc = io_uring_submit(chunk->uring);
+	if (uring_unlikely(rc < 0)) {
+		fprintf(stderr, "io_uring_submit fail: %s\n", strerror(-rc));
+		return -1;
+	}
+}
+
+void
+ssd_chunk_sync(struct ssd_chunk *chunk)
+{
+	while (!TAILQ_EMPTY(&chunk->write_queue_entries)) {
+		write_queue_pop_batch(chunk);
+	}
+		
+	uint8_t cache_pending;
+
+    do {
+
+		process_completions(chunk);
+
+		cache_pending = 0;
+        for (uint8_t k = 0; k < chunk->cache_actual_size; k++) {
+            if (chunk->cache_pending[k]) {
+                cache_pending = 1;
+            }
+        }
+
+    } while (cache_pending);
+}
+
 static int
 store_io(struct ssd_chunk *chunk, const uint8_t cacheline, const uint8_t sync_flag)
 {	
+	uint32_t value = chunk->cache_ids[cacheline];
+
+	if (sync_flag == ASYNC) {			
+		write_queue_push_block(chunk, value, cacheline);
+		return 0;
+	}
+
 	struct io_uring_sqe *sqe = io_uring_get_sqe(chunk->uring);
 	if (uring_unlikely(!sqe)) {
 		fprintf(stderr, "unable to get sqe instance\n");
@@ -267,8 +439,7 @@ store_io(struct ssd_chunk *chunk, const uint8_t cacheline, const uint8_t sync_fl
 
 	void *base = chunk->cache_iovecs[cacheline].iov_base;
 	uint32_t len = chunk->cache_iovecs[cacheline].iov_len;
-	uint32_t value = chunk->cache_ids[cacheline];
-
+	
 	io_uring_prep_write_fixed(sqe, chunk->fd, base, len, value * len, cacheline); 
 	io_uring_sqe_set_data(sqe, (void*)(uint64_t)cacheline);
 	
@@ -277,7 +448,7 @@ store_io(struct ssd_chunk *chunk, const uint8_t cacheline, const uint8_t sync_fl
 		fprintf(stderr, "io_uring_submit fail: %s\n", strerror(-rc));
 		return -1;
 	} else {
-		while (sync_flag && chunk->cache_pending[cacheline]) {
+		while (chunk->cache_pending[cacheline]) {
 			process_completions(chunk);
 		}
 	}
@@ -289,7 +460,7 @@ static int
 cache_update(struct ssd_chunk *chunk, const uint32_t id, uint8_t *cacheline, const uint8_t sync_flag)
 {
 	// Nice moment to try augmenting the cache size
-    if (chunk->cache_actual_size < min(MAX_CHUNK_CACHESIZE, chunk->capacity)) {
+    if (chunk->cache_actual_size < min(CHUNK_CACHE_MAXSIZE, chunk->capacity)) {
 
         void *buf = ssd_cache_pop(chunk->global_cache);
 
@@ -302,6 +473,7 @@ cache_update(struct ssd_chunk *chunk, const uint32_t id, uint8_t *cacheline, con
             
 			chunk->cache_ids[size] = id;
 			chunk->cache_pending[size] = PENDING_LOAD;
+			chunk->cache_usage++;
 
 			*cacheline = size++;
 
@@ -321,6 +493,7 @@ cache_update(struct ssd_chunk *chunk, const uint32_t id, uint8_t *cacheline, con
 
                 chunk->cache_ids[k] = id;
 				chunk->cache_pending[k] = PENDING_LOAD;
+				chunk->cache_usage++;
 
 				*cacheline = k;
 				return load_io(chunk, id, *cacheline, sync_flag);
@@ -344,12 +517,16 @@ fetch_lb(struct ssd_chunk *chunk, uint32_t new_id)
         return old_lb;
     }
 	
-//	printf("old = %u, new = %u\n", old_id, new_id);
+	if (chunk->cache_usage >= chunk->cache_actual_size - 2) {
+		write_queue_pop_batch(chunk);
+	}
+
+	// printf("old = %u, new = %u\n", old_id, new_id);
 
 	update_prediction_rate(chunk, old_id, new_id);
 	
     chunk->cache_pending[old_cacheline] = PENDING_STORE;
-
+	chunk->cache_usage++;
 	
 	// This case is special, because a singleline cache is obliged to
 	// complete the store operation before the next load. In the case
@@ -415,7 +592,7 @@ double
 ssd_chunk_read_double(struct ssd_chunk* chunk, uint64_t pos)
 {   
     uint32_t block_order = ssd_cache_get_info(chunk->global_cache)->block_order; 
-	struct ioid id = get_ioid(pos, block_order - DOUBLE_ORDER);
+	struct io_id id = get_io_id(pos, block_order - DOUBLE_ORDER);
     double *lb = (double*)fetch_lb(chunk, id.index);
     if (lb) {
         return lb[id.offset];
@@ -429,7 +606,7 @@ void
 ssd_chunk_write_double(struct ssd_chunk* chunk, uint64_t pos, double value)
 {
 	uint32_t block_order = ssd_cache_get_info(chunk->global_cache)->block_order; 
-    struct ioid id = get_ioid(pos, block_order - DOUBLE_ORDER);
+    struct io_id id = get_io_id(pos, block_order - DOUBLE_ORDER);
     double *lb = (double*)fetch_lb(chunk, id.index);
     if (lb) {
         lb[id.offset] = value;

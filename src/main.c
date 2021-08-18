@@ -8,15 +8,15 @@
 #include <time.h>
 
 #define NUM_THREADS 1U
-#define QUEUE_DEPTH 64U
-#define IO_BLOCK_ORDER 9U
+#define QUEUE_DEPTH 32U
+#define IO_BLOCK_ORDER 20U
 
 int
 main()
 {
 	int rc;
 
-	uint32_t block_number = MAX_CHUNK_CACHESIZE;
+	uint32_t block_number = CHUNK_CACHE_MAXSIZE;
 	uint32_t block_order = IO_BLOCK_ORDER;
 
 	/* Initialize RAM storage */
@@ -54,7 +54,7 @@ main()
 		ssd_chunk_write_double(chunk, i, 42.);
 	}
 	ssd_chunk_sync(chunk);
-	ssd_chunk_print(chunk);
+	//ssd_chunk_print(chunk);
 	
 	double avg = 0;
 	double rec;
@@ -63,7 +63,7 @@ main()
 	for (int num_iter = 0; num_iter < 10; num_iter++) {
 		clock_t beg = clock();
 		for (uint64_t i = 0, j = 0; i < n; i++) {
-			j = (j + 999999) % n;
+			j = (i & 1) * 999999;
 			rec = ssd_chunk_read_double(chunk, j);
 		}
 		ssd_chunk_sync(chunk);
@@ -82,7 +82,7 @@ main()
 		fprintf(stderr, "error, rec = %f\n", rec);
 	}
 
-	ssd_chunk_print(chunk);
+	//ssd_chunk_print(chunk);
 
 	// Free a chunk
 	ssd_chunk_free(chunk);
