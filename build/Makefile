@@ -29,8 +29,10 @@ endif
 
 DEP_CMD = $(patsubst %,-I%,$(DEP_DIR))
 
-#override CFLAGS += -g -DDEBUG -Wall -Wextra -pedantic -fsanitize=address
-override CFLAGS += -O3 -fomit-frame-pointer
+LFS = -D _LARGEFILE64_SOURCE -D _FILE_OFFSET_BITS=64
+
+#override CFLAGS += $(LFS) -g -D DEBUG -Wall -Wextra -pedantic -fsanitize=address
+override CFLAGS += $(LFS) -O3 -fomit-frame-pointer
 
 COMPILER = $(CXX)
 

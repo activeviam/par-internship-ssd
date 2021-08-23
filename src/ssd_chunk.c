@@ -2,6 +2,7 @@
 #include <ssd_allocator.h>
 #include <stdio.h>
 #include <string.h>
+#include <unistd.h>
 
 #define INT_ORDER		2
 #define DOUBLE_ORDER	3
@@ -10,24 +11,21 @@
 #define SYNC			1
 
 #define READY			0
-#define	PENDING_STORE	1
-#define PENDING_LOAD	2
-#define AWAITING_STORE	3
+#define AWAITING_STORE	1
+#define	PENDING_STORE	2
+#define PENDING_LOAD	3
+
+#define CLEAN			0
+#define DIRTY			1
 
 static inline int64_t min(int64_t a, int64_t b) { return a < b ? a : b ; }
 static inline int64_t max(int64_t a, int64_t b) { return a > b ? a : b ; }
 
 static void
-update_prediction_rate(struct ssd_chunk *chunk, const uint32_t old_id, const uint32_t new_id)
+update_prediction_rate(struct ssd_chunk *chunk, int adjust)
 {
 	int64_t hit_prediction_rate = (int64_t)chunk->cache_prediction_rate;
-
-	if (old_id + 1 == new_id) {
-		hit_prediction_rate = min(255, hit_prediction_rate + 8);
-	} else {
-		hit_prediction_rate = max(0, hit_prediction_rate - 8);
-	}
-
+	hit_prediction_rate = max(0, min(255, hit_prediction_rate + adjust));
 	chunk->cache_prediction_rate = (uint8_t)hit_prediction_rate;
 }
 
@@ -143,6 +141,7 @@ ssd_chunk_init(struct io_uring 		*uring,
 			chunk->cache_iovecs[cachesize].iov_len = io_size;
 			chunk->cache_ids[cachesize] = cachesize;
 			chunk->cache_pending[cachesize] = READY;
+			chunk->cache_dirty[cachesize] = CLEAN;
 			cachesize++;
 		}
 	}
@@ -182,8 +181,9 @@ search_cacheline(struct ssd_chunk *chunk, uint32_t id)
 static void
 process_data(ssd_chunk *chunk, uint64_t cache_data)
 {
-	//if (chunk->cache_pending[(uint8_t)cacheline] == PENDING_STORE) {}
-	chunk->cache_pending[(uint8_t)cache_data] = READY;
+	uint8_t cacheline = (uint8_t)cache_data;
+	chunk->cache_pending[cacheline] = READY;
+	chunk->cache_dirty[cacheline] = CLEAN;
 	chunk->cache_usage--;
 }
 
@@ -212,49 +212,85 @@ process_completions(struct ssd_chunk *chunk, uint8_t counter = 0)
 	return 0;
 }
 
-
 static int
-load_io(struct ssd_chunk *chunk, const uint32_t value, const uint8_t cacheline, const uint8_t sync_flag)
+_load_io_async(struct ssd_chunk *chunk, const uint32_t id, const uint32_t offset, const uint32_t size, const uint8_t cacheline)
 {
+	void *base = chunk->cache_iovecs[cacheline].iov_base;
+	uint32_t block_size = chunk->cache_iovecs[cacheline].iov_len;
+
 	struct io_uring_sqe *sqe = io_uring_get_sqe(chunk->uring);
 	if (!sqe) {
 		fprintf(stderr, "unable to get sqe instance\n");
 		return -1;
 	}
 
-	void *base = chunk->cache_iovecs[cacheline].iov_base;
-	uint32_t len = chunk->cache_iovecs[cacheline].iov_len;
-
-	io_uring_prep_read_fixed(sqe, chunk->fd, base, len, value * len, cacheline);  
+	io_uring_prep_read_fixed(sqe, chunk->fd, (uint8_t*)base + offset, size, chunk->offset + id * block_size + offset, cacheline);
 	io_uring_sqe_set_data(sqe, (void*)(uint64_t)cacheline);
+	
 	int rc = io_uring_submit(chunk->uring);
 	if (uring_unlikely(rc < 0)) {
 		fprintf(stderr, "io_uring_submit fail: %s\n", strerror(-rc));
 		return -1;
-	} else {
-		while (sync_flag && chunk->cache_pending[cacheline]) {
-			process_completions(chunk);
-		}
 	}
 
-    return 0;
+	return 0;
+}
+
+static uint8_t
+_mask_pos(struct ssd_chunk *chunk, const uint32_t offset)
+{
+	return (uint8_t)(16.f * offset / chunk->cache_iovecs[0].iov_len);
+}
+
+static int
+load_io(struct ssd_chunk *chunk, const uint32_t id, uint32_t offset, const uint8_t cacheline, const uint8_t sync_flag)
+{
+	uint32_t block_size = chunk->cache_iovecs[cacheline].iov_len;
+
+	if (sync_flag == ASYNC) {
+		//chunk->cache_pending[cacheline] += 16;
+		return _load_io_async(chunk, id, 0, block_size, cacheline);
+	}
+
+	void *base = chunk->cache_iovecs[cacheline].iov_base;
+
+	//uint32_t part_size = block_size >> 4;
+	//offset &= ~(part_size - 1);
+	//uint8_t mask_pos = _mask_pos(chunk, offset);
+	//chunk->cache_mask[cacheline] |= (1 << mask_pos);
+
+	size_t fetched = pread(chunk->fd, (uint8_t*)base, block_size, chunk->offset + id * block_size);
+
+	if (fetched != block_size) {
+		fprintf(stderr, "unsuccessful sync read\n");
+		return -1;
+	}
+
+	/*
+	int rc = 0;
+	if (mask_pos < 15) {
+		chunk->cache_pending[cacheline] += 15 - mask_pos;
+		rc |= _load_io_async(chunk, id, offset + part_size, block_size - offset - part_size, cacheline);
+	}
+	*/
+
+	return 0;
 }
 
 static int
 store_io(struct ssd_chunk *chunk, const uint8_t cacheline, const uint8_t sync_flag)
 {	
-	uint32_t value = chunk->cache_ids[cacheline];
+	uint32_t id = chunk->cache_ids[cacheline];
+	void *base = chunk->cache_iovecs[cacheline].iov_base;
+	uint32_t size = chunk->cache_iovecs[cacheline].iov_len;
 
 	struct io_uring_sqe *sqe = io_uring_get_sqe(chunk->uring);
 	if (uring_unlikely(!sqe)) {
 		fprintf(stderr, "unable to get sqe instance\n");
 		return -1;
 	}
-
-	void *base = chunk->cache_iovecs[cacheline].iov_base;
-	uint32_t len = chunk->cache_iovecs[cacheline].iov_len;
 	
-	io_uring_prep_write_fixed(sqe, chunk->fd, base, len, value * len, cacheline); 
+	io_uring_prep_write_fixed(sqe, chunk->fd, base, size, chunk->offset + id * size, cacheline); 
 	io_uring_sqe_set_data(sqe, (void*)(uint64_t)cacheline);
 	
 	int rc = io_uring_submit(chunk->uring);
@@ -317,7 +353,7 @@ ssd_chunk_sync(struct ssd_chunk *chunk)
 }
 
 static int
-cache_update(struct ssd_chunk *chunk, const uint32_t id, uint8_t *cacheline, const uint8_t sync_flag)
+cache_update(struct ssd_chunk *chunk, const uint32_t id, const uint32_t offset, uint8_t *cacheline, const uint8_t sync_flag)
 {
 	// Nice moment to try augmenting the cache size
     if (chunk->cache_actual_size < min(CHUNK_CACHE_MAXSIZE, chunk->capacity)) {
@@ -337,7 +373,7 @@ cache_update(struct ssd_chunk *chunk, const uint32_t id, uint8_t *cacheline, con
 
 			*cacheline = size++;
 
-			return load_io(chunk, id, *cacheline, sync_flag);
+			return load_io(chunk, id, offset, *cacheline, sync_flag);
         }
     }
 
@@ -356,7 +392,7 @@ cache_update(struct ssd_chunk *chunk, const uint32_t id, uint8_t *cacheline, con
 				chunk->cache_usage++;
 
 				*cacheline = k;
-				return load_io(chunk, id, *cacheline, sync_flag);
+				return load_io(chunk, id, offset, *cacheline, sync_flag);
             }
        	}
 
@@ -367,25 +403,30 @@ cache_update(struct ssd_chunk *chunk, const uint32_t id, uint8_t *cacheline, con
 }
 
 static void*
-fetch_lb(struct ssd_chunk *chunk, uint32_t new_id)
+fetch_lb(struct ssd_chunk *chunk, uint32_t new_id, uint32_t offset)
 {
     uint8_t  old_cacheline = chunk->cache_current_line;
-    uint32_t old_id = chunk->cache_ids[old_cacheline];
+	uint8_t  new_cacheline;
+    
+	uint32_t old_id = chunk->cache_ids[old_cacheline];
     void*    old_lb = chunk->cache_iovecs[old_cacheline].iov_base;
     
     if (old_id == new_id) {
-        return old_lb;
-    }	
+		update_prediction_rate(chunk, 1);	
+		return old_lb;
+    }
 
 	// printf("old = %u, new = %u\n", old_id, new_id);
 
-	update_prediction_rate(chunk, old_id, new_id);
 	
 	if (chunk->cache_pending[old_cacheline] == READY) {
 		chunk->cache_usage++;
 	}
-    chunk->cache_pending[old_cacheline] = AWAITING_STORE;
-		
+
+	if (chunk->cache_dirty[old_cacheline]) {
+    	chunk->cache_pending[old_cacheline] = AWAITING_STORE;
+	}
+
 	// This case is special, because a singleline cache is obliged to
 	// complete the store operation before the next load. In the case
 	// of multiline cache it could be more convenient to try load first
@@ -398,7 +439,7 @@ fetch_lb(struct ssd_chunk *chunk, uint32_t new_id)
             return NULL;
         }
 
-        if (uring_unlikely(cache_update(chunk, new_id, &old_cacheline, SYNC))) {
+        if (uring_unlikely(cache_update(chunk, new_id, offset, &old_cacheline, SYNC))) {
             fprintf(stderr, "failed to update cache: load error\n");
             return NULL;
         }
@@ -406,21 +447,26 @@ fetch_lb(struct ssd_chunk *chunk, uint32_t new_id)
         return chunk->cache_iovecs[0].iov_base;
     }
 
-	uint8_t new_cacheline = search_cacheline(chunk, new_id);
+	new_cacheline = search_cacheline(chunk, new_id);
 	
     if (new_cacheline == chunk->cache_actual_size) { // Cache miss
 		
+		update_prediction_rate(chunk, -1);
+
 		// Performing a forced cache load on ready cacheline
-        if (uring_unlikely(cache_update(chunk, new_id, &new_cacheline, SYNC))) {
+        if (uring_unlikely(cache_update(chunk, new_id, offset, &new_cacheline, SYNC))) {
             fprintf(stderr, "failed to update cache: load error\n");
             return NULL;
         }
 
     } else { // Cache hit
+
+		update_prediction_rate(chunk, 1);
+
 		do {
 			process_completions(chunk);
-		} while (chunk->cache_pending[new_cacheline] == PENDING_LOAD); 
-    }
+		} while (chunk->cache_pending[new_cacheline] >= PENDING_LOAD);
+	}
 
     if (uring_unlikely(prepare_store_io(chunk, old_cacheline, ASYNC))) {
         fprintf(stderr, "failed to update cache: store error\n");
@@ -439,7 +485,7 @@ fetch_lb(struct ssd_chunk *chunk, uint32_t new_id)
 		uint8_t status_backup = chunk->cache_pending[chunk->cache_current_line]; 
 
 		chunk->cache_pending[chunk->cache_current_line] = PENDING_STORE;
-		cache_update(chunk, new_id, &new_cacheline, ASYNC);
+		cache_update(chunk, new_id, 0, &new_cacheline, ASYNC);
 		chunk->cache_pending[chunk->cache_current_line] = status_backup;
 	}
 
@@ -451,7 +497,8 @@ ssd_chunk_read_double(struct ssd_chunk* chunk, uint64_t pos)
 {   
     uint32_t block_order = ssd_cache_get_info(chunk->global_cache)->block_order; 
 	struct io_id id = get_io_id(pos, block_order - DOUBLE_ORDER);
-    double *lb = (double*)fetch_lb(chunk, id.index);
+    double *lb = (double*)fetch_lb(chunk, id.index, id.offset << DOUBLE_ORDER);
+
     if (lb) {
         return lb[id.offset];
     } else {
@@ -462,10 +509,11 @@ ssd_chunk_read_double(struct ssd_chunk* chunk, uint64_t pos)
 
 void
 ssd_chunk_write_double(struct ssd_chunk* chunk, uint64_t pos, double value)
-{
+{	
 	uint32_t block_order = ssd_cache_get_info(chunk->global_cache)->block_order; 
     struct io_id id = get_io_id(pos, block_order - DOUBLE_ORDER);
-    double *lb = (double*)fetch_lb(chunk, id.index);
+    double *lb = (double*)fetch_lb(chunk, id.index, id.offset);
+
     if (lb) {
         lb[id.offset] = value;
     } else {
