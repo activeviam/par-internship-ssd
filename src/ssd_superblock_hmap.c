@@ -1,4 +1,6 @@
 #include <ssd_heap.h>
+#include <string.h>
+#include <stdlib.h>
 
 #define NUM_HASH_PRIMES 30
 static const uint64_t primes[NUM_HASH_PRIMES] =
@@ -11,62 +13,107 @@ static const uint64_t primes[NUM_HASH_PRIMES] =
   100663319ul,  201326611ul,  402653189ul,  805306457ul,  1610612741ul
 };
 
-#define MAX_LOAD_FACTOR 5
+#define MAX_LOAD_FACTOR 10
+
+int
+ssd_superblock_hmap_init(ssd_superblock_hmap_t *hmap)
+{
+	hmap->buckets = NULL;
+	hmap->size = 0;
+	hmap->order = 0;
+	return 0;
+}
 
 static void
-ssd_superblock_hmap_rehash(ssd_superblock_hmap_t *hmap);
+hmap_rehash(ssd_superblock_hmap_t *hmap);
 
-ssd_superblock_header_ptr
-ssd_superblock_hmap_insert(ssd_superblock_hmap_t *hmap, ssd_superblock_header_ptr block)
+void
+ssd_superblock_hmap_insert(ssd_superblock_hmap_t *hmap, ssd_superblock_header_ptr superblock)
 {
 	uint32_t capacity = primes[hmap->order];
-	uint32_t index = block->bsize % capacity;
 
-	block->link = hmap->buckets[index];
-	hmap->buckets[index] = block;
-	
-	hmap->size++;
-	if (hmap->size > MAX_LOAD_FACTOR * capacity) {
-		hmap_rearrange(hmap);
+	if (++hmap->size > MAX_LOAD_FACTOR * capacity) {
+		hmap_rehash(hmap);
+		capacity = primes[hmap->order];
 	}
 
-	return hmap->buckets[index];
+	uint32_t index = superblock->bsize % capacity;
+
+	superblock->link = hmap->buckets[index];
+	hmap->buckets[index] = superblock;
 }
 
-ssd_superblock_header_ptr*
-ssd_superblock_hmap_find(ssd_superblock_hmap_t *hmap, uint32_t bsize)
+ssd_superblock_header_ptr *
+ssd_superblock_hmap_find(ssd_superblock_hmap_t *hmap, ssd_superblock_header_ptr superblock)
 {
+	if (hmap->order == 0)
+		return NULL;
+
 	uint32_t capacity = primes[hmap->order];
-	uint32_t index = bsize % hmap->capacity;
 
-	ssd_superblock_header_ptr *curr = hmap->buckets + index;
+	uint32_t index = superblock->bsize % capacity;
+	
+	ssd_superblock_header_ptr *it = hmap->buckets + index;
 
-	while (*curr) {
-		ssd_superblock_header_ptr block = *curr;
-		if (block->bsize == bsize) {
+	while ((*it)->link) {
+		if (*it == superblock) {
 			break;
 		}
-		curr = &block->link;
+		it = &((*it)->link);
 	}
 
-	return curr;
+	return it;
+}
+
+void
+ssd_superblock_hmap_suggest(ssd_superblock_hmap_t 		*hmap,
+						 	uint32_t					bsize,
+						 	ssd_superblock_header_ptr	**it_ptr,
+						 	ssd_block_header_ptr		*block_ptr)
+{
+	if (hmap->order == 0)
+		return;
+
+	uint32_t capacity = primes[hmap->order];
+
+	uint32_t index = bsize % capacity;
+		
+	ssd_superblock_header_ptr *it = hmap->buckets + index;
+	
+	while (*it) {
+
+		ssd_superblock_header_ptr superblock = *it;
+		
+		if (superblock->bsize == bsize) {
+
+			*block_ptr = (ssd_block_header_ptr)ssd_concurrent_stack_pop(&superblock->stack);
+			if (*block_ptr) {
+				*superblock_it = it;
+				return;
+			}
+		}
+
+		it = &(*it)->link;
+	}
+
+	*it_ptr = NULL;
 }
 
 ssd_superblock_header_ptr
-ssd_superblock_hmap_remove(ssd_superblock_hmap_t *hmap, ssd_superblock_header_ptr *curr)
+ssd_superblock_hmap_remove(ssd_superblock_hmap_t *hmap, ssd_superblock_header_ptr *it)
 {
-	ssd_superblock_header_ptr block = *curr;
-	*curr = block->link;
-	block->link = NULL;
-	return block; 
+	ssd_superblock_header_ptr superblock = *it;
+	*it = superblock->link;
+	superblock->link = NULL;
+	return superblock; 
 }
 
 static void
 hmap_rehash(ssd_superblock_hmap_t *hmap)
 {	
-	uint32_t old_capacity = primes[hmap->order++];
+	uint32_t old_capacity = primes[hmap->order];
 	
-	if (hmap->order >= NUM_HASH_PRIMES)
+	if (++hmap->order >= NUM_HASH_PRIMES)
 		return;
 	
 	uint32_t new_capacity = primes[hmap->order];
@@ -78,11 +125,17 @@ hmap_rehash(ssd_superblock_hmap_t *hmap)
 	memset(hmap->buckets + old_capacity, 0, sizeof(void*) * diff);
 
 	for (uint32_t i = 0; i < old_capacity; i++) {
-		ssd_superblock_header_ptr *curr = hmap->buckets + i;
-		while (*curr) {
-			hmap_insert(hmap, hmap_remove(hmap, curr));
+		ssd_superblock_header_ptr *it = hmap->buckets + i;
+		while (*it) {
+			ssd_superblock_hmap_insert(hmap, ssd_superblock_hmap_remove(hmap, it));
 		}
 	}
+}
 
-	return 0;
+void
+ssd_superblock_hmap_free(ssd_superblock_hmap_t *hmap)
+{
+	free(hmap->buckets);
+	hmap->size = 0;
+	hmap->order = 0;
 }

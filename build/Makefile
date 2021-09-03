@@ -1,53 +1,59 @@
 ﻿HDR_DIR = ../include
 
-DEP_DIR = 	$(HDR_DIR) \
-			$(BOOST_DIR)
-
-SRC_DIR =	../src
-
-LIBS = -luring
-
-_HDRS =	ssd_chunk.h \
-		ssd_cache.h \
-		ssd_allocator.h \
-		ssd_concurrent_unique_stack.h
+_HDRS =	ssd_env.h \
+		ssd_thread.h \
+		ssd_concurent_stack.h \
+		ssd_virtmem.h \
+		ssd_superblock.h \
+		ssd_superblock_hmap.h \
+		ssd_heap.h \
+		ssd_chunk.h \
+		threadsafe_queue.h
 
 HDRS = $(patsubst %,$(HDR_DIR)/%,$(_HDRS))
 
+SRC_DIR = ../src
+
 OBJS =	main.o \
+		ssd_thread.o \
+		ssd_concurrent_stack.o \
+		ssd_virtmem.o \
+		ssd_superblock.o \
+		ssd_superblock_hmap.o \
+		ssd_heap.o \
 		ssd_chunk.o \
-		ssd_allocator.o \
-		ssd_concurrent_unique_stack.o
+		threadsafe_queue.o
 
-#BUILD_CMD = $(strip $(CFLAGS))
-#ifeq ($(BUILD_CMD),-DCUSTOM_LOCKFREE)
-#	OBJS += ssd_cache_custom_lockfree.o
-#else ifeq ($(BUILD_CMD),-DCUSTOM_SPINLOCK)
-#	OBJS += ssd_cache_custom_spinlock.o
-#else ifeq ($(BUILD_CMD),-DBOOST)
-#	OBJS += ssd_cache_boost.o
-#endif
+TEST_DIR = ../tests
 
-DEP_CMD = $(patsubst %,-I%,$(DEP_DIR))
+TESTS = test_flush.o \
+		test_malloc.o \
+		test_arbitration.o
 
+LIBS = -lpthread
+
+INCLUDE = $(patsubst %,-I%,$(HDR_DIR))
 LFS = -D _LARGEFILE64_SOURCE -D _FILE_OFFSET_BITS=64
 
-#override CFLAGS += $(LFS) -g -D DEBUG -Wall -Wextra -pedantic -fsanitize=address
-override CFLAGS += $(LFS) -O3 -fomit-frame-pointer
+#CFLAGS = $(INCLUDE) $(LFS) -g -D DEBUG -Wall -Wextra -pedantic -fsanitize=address
+CFLAGS = $(INCLUDE) $(LFS) -O3 -fomit-frame-pointer
 
-COMPILER = $(CC)
+app: $(OBJS) $(TESTS)
+	$(CC) -o $@ $^ $(LIBS) $(CFLAGS)
 
-app: $(OBJS) 
-	$(COMPILER) -o $@ $^ $(LIBS) $(CFLAGS)
+test_%.o: $(TEST_DIR)/test_%.c
+	$(CC) -c -o $@ $< $(LIBS) $(CFLAGS)
 
-%.o: $(SRC_DIR)/%.c $(HDRS)
-	$(COMPILER) -c -o $@ $< $(DEP_CMD) $(LIBS) $(CFLAGS)
+%.o: $(SRC_DIR)/%.c
+	$(CC) -c -o $@ $< $(LIBS) $(CFLAGS)
 
 .PHONY: info, clean
 
 info:
-	@echo CFLAGS:  $(CFLAGS)
-	@echo BOOST_DIR: $(BOOST_DIR)
+	@echo CFLAGS:			$(CFLAGS)
+	@echo HEADER DIRECTORY: $(HDR_DIR)
+	@echo SOURCE DIRECTORY: $(SRC_DIR)
+	@echo TEST DIRECTORY:	$(TEST_DIR)
 
 clean:
 	rm -f app *.o

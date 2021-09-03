@@ -9,13 +9,25 @@ typedef struct ssd_superblock_hmap_s {
 	uint32_t					order;
 } ssd_superblock_hmap_t;
 
-ssd_superblock_header_ptr
+int
+ssd_superblock_hmap_init(ssd_superblock_hmap_t *hmap);
+
+void
 ssd_superblock_hmap_insert(ssd_superblock_hmap_t *hmap, ssd_superblock_header_ptr block);
 
-ssd_superblock_header_ptr*
-ssd_superblock_hmap_find(ssd_superblock_hmap_t *hmap, uint32_t bsize);
+ssd_superblock_header_ptr *
+ssd_superblock_hmap_find(ssd_superblock_hmap_t *hmap, ssd_superblock_header_ptr superblock);
+
+void
+ssd_superblock_hmap_suggest(ssd_superblock_hmap_t 		*hmap,
+						 	uint32_t					bsize,
+						 	ssd_superblock_header_ptr	*superblock_ptr,
+						 	ssd_block_header_ptr		*block_ptr);
 
 ssd_superblock_header_ptr
 ssd_superblock_hmap_remove(ssd_superblock_hmap_t *hmap, ssd_superblock_header_ptr *curr);
+
+void
+ssd_superblock_hmap_free(ssd_superblock_hmap_t *hmap);
 
 #endif

@@ -2,6 +2,7 @@
 #define __SSD_CONCURRENT_STACK_H__
 
 #include <stdatomic.h>
+#include <stdint.h>
 
 typedef void* void_ptr;
 
