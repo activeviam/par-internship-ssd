@@ -3,6 +3,8 @@
 #include <string.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <errno.h>
+#include <string.h>
 
 #define SSD_INT_ORDER 2
 #define SSD_DOUBLE_ORDER 3
@@ -41,12 +43,13 @@ ssd_chunk_init(ssd_heap_pool_t *pool, ssd_chunk_t *chunk, uint32_t size)
 
 	chunk->fd = open(filename, O_CREAT|O_TRUNC|O_RDWR, S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP);
 	if (chunk->fd < 0) {
-		fprintf(stderr, "cannot open file %s\n", filename);
+		fprintf(stderr, "cannot open file %s, thre reason is %s\n", filename, strerror(errno));
 		return -1;
 	}
 
 	chunk->superblock = 0;
 	chunk->block = 0;
+	
 	int rc = ssd_heap_allocate(pool, &chunk->superblock, &chunk->block, size);
 	if (rc < 0) {
 		return rc;
@@ -63,7 +66,7 @@ double
 ssd_chunk_read_double(ssd_chunk_t *chunk, uint32_t pos)
 {
 	if (pos >= (chunk->size >> SSD_DOUBLE_ORDER)) {
-		//fprintf(stderr, "invalid arg: pos at read_double()\n");
+		fprintf(stderr, "invalid arg: pos at read_double()\n");
 		return 0;
 	}
 
@@ -77,6 +80,7 @@ ssd_chunk_read_double(ssd_chunk_t *chunk, uint32_t pos)
 				// It didn't perform GC on this block before neither
 				double *doubles = (double*)SSD_PTR_MASK(chunk->data);
 				double value = doubles[pos];
+
 				ssd_rwlock_rdunlock(&chunk->superblock->rwlock);
 				return value;	
 			}
@@ -84,10 +88,9 @@ ssd_chunk_read_double(ssd_chunk_t *chunk, uint32_t pos)
 			// If GC has been aleady performed, there is a need in a new allocation
 			ssd_rwlock_rdunlock(&chunk->superblock->rwlock);
 		}
-
-		
+	
 		// Only one thread should do the next chunk allocation
-
+		
 		if (pthread_mutex_trylock(&chunk->mutex) == 0) {
 
 			ssd_superblock_header_ptr superblock;
@@ -106,14 +109,33 @@ ssd_chunk_read_double(ssd_chunk_t *chunk, uint32_t pos)
 			// While the thread execution allocation is in this point, the creator thread
 			// may still flush the previous block of memory. Wait for the flush to complete
 			ssd_rwlock_rdlock(&chunk->superblock->rwlock);
-			if (!chunk->superblock->used) {
-				memcpy(old_data, new_data, chunk->size);
+			
+			if (chunk->superblock->bsize & 0x1) {
+			
+				new_data = memcpy(new_data, old_data, chunk->size);
+
 				ssd_rwlock_rdunlock(&chunk->superblock->rwlock);
+			
 			} else {
-				printf("WOW\n");
+
 				ssd_rwlock_rdunlock(&chunk->superblock->rwlock);
+				
+				off_t file_pos = lseek(chunk->fd, 0, SEEK_SET);
+
+				if (file_pos) {
+					fprintf(stderr, "error in file seek: %s\n", strerror(errno));
+					pthread_mutex_unlock(&chunk->mutex);
+					return 0;
+				}
+
 				// At this point the flush is completed, executing thread may read the SSD disk 
-				read(chunk->fd, new_data, chunk->size);
+				ssize_t bytes_read = read(chunk->fd, new_data, chunk->size);
+
+				if (bytes_read != chunk->size) {
+					fprintf(stderr, "error in file read: %s\n", strerror(errno));
+					pthread_mutex_unlock(&chunk->mutex);
+				}
+
 			}
 
 			chunk->superblock = superblock;
@@ -157,14 +179,13 @@ ssd_chunk_write_double(ssd_chunk_t *chunk, uint32_t pos, double value)
 				// The block is marked as dirty. When GC is performing the flush,
 				// it never flushes the clean pages
 				chunk->data = SSD_CHUNK_DATA_DIRTY(chunk->data);
+				
 				ssd_rwlock_rdunlock(&chunk->superblock->rwlock);
 				return;	
 			}
 		
 			ssd_rwlock_rdunlock(&chunk->superblock->rwlock);
 		}
-
-		printf("wow\n");
 
 		if (pthread_mutex_trylock(&chunk->mutex) == 0) {
 
@@ -184,16 +205,25 @@ ssd_chunk_write_double(ssd_chunk_t *chunk, uint32_t pos, double value)
 			// While the thread execution allocation is in this point, the creator thread
 			// may still flush the previous block of memory. Wait for the flush to complete
 			ssd_rwlock_rdlock(&chunk->superblock->rwlock);
-			if (!chunk->superblock->used) {
+		
+			if (chunk->superblock->bsize & 0x1) {
+		
 				memcpy(old_data, new_data, chunk->size);
 				ssd_rwlock_rdunlock(&chunk->superblock->rwlock);
+			
 			} else {
-				printf("WOW\n");
-				ssd_rwlock_rdunlock(&chunk->superblock->rwlock);
-				// At this point the flush is completed, executing thread may read the SSD disk 
-				read(chunk->fd, new_data, chunk->size);
-			}
 
+				ssd_rwlock_rdunlock(&chunk->superblock->rwlock);
+				
+				// At this point the flush is completed, executing thread may read the SSD disk 
+				ssize_t bytes_read = read(chunk->fd, new_data, chunk->size);
+
+				if (bytes_read != chunk->size) {
+					fprintf(stderr, "error in file read: %s\n", strerror(errno));
+					pthread_mutex_unlock(&chunk->mutex);
+				}
+			}
+		
 			chunk->superblock = superblock;
 			chunk->block = block;
 			chunk->data = new_data;
@@ -217,7 +247,7 @@ ssd_chunk_free(ssd_chunk_t *chunk)
 {
 	ssd_rwlock_rdlock(&chunk->superblock->rwlock);
 	if (chunk->data) {
-		chunk->data = 0;
+		chunk->data = 0;	
 		ssd_heap_deallocate(chunk->superblock, chunk->block);
 	}
 	ssd_rwlock_rdunlock(&chunk->superblock->rwlock);

@@ -31,7 +31,7 @@ main()
 	printf("sizeof(ssd_block_header_t) = %lu\n", sizeof(ssd_block_header_t));
 	printf("sizeof(ssd_chunk_t) = %lu\n", sizeof(ssd_chunk_t));
 	
-	test_arbitration();
+	test_memcpy();
 
 	return 0;
 }

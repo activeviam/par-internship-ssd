@@ -66,12 +66,12 @@ heap_rebalance(ssd_heap_pool_t *pool, uint8_t trid)
 
 	if (superblock &&
 	   ((superblock->usage == 0.f) ||
-		(heap->cold_tailq.size + heap->hot_tailq.size > pool->vmem->capacity / ssd_thread_get_num())))
+		(heap->cold_tailq.size + heap->hot_tailq.size > pool->vmem->num_superblocks / ssd_thread_get_num())))
 	{
 		TAILQ_REMOVE(&(heap->cold_tailq.head), superblock, tailq);
 		heap->cold_tailq.size--;
-		ssd_superblock_flush(superblock);
-		ssd_concurrent_stack_push(&pool->vmem->stack, superblock);
+
+		ssd_virtmem_release(pool->vmem, superblock);
 		return 1;
 	}
 
@@ -126,99 +126,68 @@ ssd_heap_allocate(ssd_heap_pool_t			*pool,
 		fprintf(stderr, "the limits are (16, %lu] bytes\n", SSD_MAX_BLOCK_SIZE);
 		return -1;
 	}
-
-	ssd_superblock_header_ptr superblock, **it_ptr;
-
-	ssd_superblock_hmap_suggest(&heap->hmap, bsize, it_ptr, block_ptr);
 	
-	superblock_ptr = *it_ptr;
-	superblock = **it_ptr;
+	ssd_superblock_header_ptr *it;
 
-	if (superblock) {
+	ssd_superblock_hmap_suggest(&heap->hmap, bsize, &it, block_ptr);
+	
+	if (it) {
+	
+		*superblock_ptr = *it;
 		return heap_rebalance(pool, trid);
 	}
 
-	superblock = (ssd_superblock_header_ptr)ssd_concurrent_stack_pop(&pool->vmem->stack);	
+	ssd_virtmem_acquire(pool->vmem, bsize, superblock_ptr, block_ptr);
 	
-	if (superblock) {
+	if (*superblock_ptr) {
+
+		if (!(*block_ptr)) {
+			ssd_superblock_reinit(*superblock_ptr, bsize);
+			*block_ptr = (ssd_block_header_ptr)ssd_concurrent_stack_pop(&(*superblock_ptr)->stack);
+		}
 		
-		ssd_superblock_init(superblock, bsize);
-		ssd_superblock_hmap_insert(&heap->hmap, superblock);
+		ssd_superblock_hmap_insert(&heap->hmap, *superblock_ptr);
 		
-		TAILQ_INSERT_TAIL(&heap->cold_tailq.head, superblock, tailq);
+		TAILQ_INSERT_TAIL(&heap->cold_tailq.head, *superblock_ptr, tailq);
 		heap->cold_tailq.size++;
 
-		*superblock_ptr = superblock;
-		*block_ptr = (ssd_block_header_ptr)ssd_concurrent_stack_pop(&superblock->stack);
+		return heap_rebalance(pool, trid);
+	}
+
+	if (heap->cold_tailq.size > 0) {	
+
+		*superblock_ptr = TAILQ_FIRST(&heap->cold_tailq.head);
+
+		ssd_superblock_header_ptr *it = ssd_superblock_hmap_find(&heap->hmap, *superblock_ptr);
+		ssd_superblock_hmap_remove(&heap->hmap, it);
+		
+		ssd_superblock_reinit(*superblock_ptr, bsize);
+		ssd_superblock_hmap_insert(&heap->hmap, *superblock_ptr);
+		
+		*block_ptr = (ssd_block_header_ptr)ssd_concurrent_stack_pop(&(*superblock_ptr)->stack);
 		return heap_rebalance(pool, trid);
 	}
 
 	uint64_t offset = SSD_SUPERBLOCK_CAPACITY + sizeof(ssd_superblock_header_t);
 
-	superblock = (ssd_superblock_header_ptr)((uint8_t*)pool->vmem->mapping + offset * trid);
-
-	if (superblock->status == SSD_SUPERBLOCK_STATUS_BUSY) {
-		ssd_superblock_flush();
-	}
+	*superblock_ptr = (ssd_superblock_header_ptr)((uint8_t*)pool->vmem->mapping + offset * trid);
 	
-
-		ssd_superblock_init(superblock, bsize);
-		ssd_superblock_hmap_insert(&heap->hmap, superblock);
+	ssd_superblock_reinit(*superblock_ptr, bsize);
+	ssd_superblock_hmap_insert(&heap->hmap, *superblock_ptr);
 		
-		TAILQ_INSERT_TAIL(&heap->cold_tailq.head, superblock, tailq);
-		heap->cold_tailq.size++;
+	TAILQ_INSERT_TAIL(&heap->cold_tailq.head, *superblock_ptr, tailq);
+	heap->cold_tailq.size++;
 
-		*superblock_ptr = superblock;
-		*block_ptr = (ssd_block_header_ptr)ssd_concurrent_stack_pop(&superblock->stack);
-		return heap_rebalance(pool, trid);
-	}
-
-	if (heap->cold_tailq.size > 0) {
-		
-		superblock = TAILQ_FIRST(&heap->cold_tailq.head);
-		ssd_superblock_flush(superblock);
-		ssd_superblock_init(superblock, bsize);
-
-		ssd_superblock_header_ptr *it = ssd_superblock_hmap_find(&heap->hmap, superblock);
-		ssd_superblock_hmap_remove(&heap->hmap, it);
-		ssd_superblock_hmap_insert(&heap->hmap, superblock);
-		
-		*superblock_ptr = superblock;
-		*block_ptr = (ssd_block_header_ptr)ssd_concurrent_stack_pop(&superblock->stack);
-		return heap_rebalance(pool, trid);
-	}
+	*block_ptr = (ssd_block_header_ptr)ssd_concurrent_stack_pop(&(*superblock_ptr)->stack);
 	
-	if (heap->hot_tailq.size > 0) {
-		
-		superblock = TAILQ_FIRST(&heap->hot_tailq.head);
-		ssd_superblock_flush(superblock);
-		ssd_superblock_init(superblock, bsize);
-
-		ssd_superblock_header_ptr *it = ssd_superblock_hmap_find(&heap->hmap, superblock);
-		ssd_superblock_hmap_remove(&heap->hmap, it);
-		ssd_superblock_hmap_insert(&heap->hmap, superblock);
-		
-		TAILQ_REMOVE(&(heap->hot_tailq.head), superblock, tailq);
-		heap->hot_tailq.size--;
-
-		TAILQ_INSERT_HEAD(&(heap->cold_tailq.head), superblock, tailq);
-		heap->cold_tailq.size++;
-
-		*superblock_ptr = superblock;
-		*block_ptr = (ssd_block_header_ptr)ssd_concurrent_stack_pop(&superblock->stack);
-		
-		return heap_rebalance(pool, trid);
-	}
-
-	fprintf(stderr, "unable to fetch any hugepage for thread %u\n", trid);
-	return -1;
+	return heap_rebalance(pool, trid);
 }
 
 void
 ssd_heap_deallocate(ssd_superblock_header_ptr superblock,
 					ssd_block_header_ptr block)
-{	
-	block->owner = NULL;
+{
+	block->owner = 0;
 	ssd_concurrent_stack_push(&superblock->stack, (void*)block);
 }
 
@@ -226,25 +195,9 @@ void
 ssd_heap_free(ssd_heap_pool_t *pool)
 {
 	for (uint8_t trid = 0; trid < SSD_MAX_NUM_THREADS; trid++) {
-		
 		ssd_heap_t *heap = &pool->heaps[trid];
-
-		ssd_superblock_header_ptr curr, next;
-
-		for (curr = TAILQ_FIRST(&heap->cold_tailq.head); curr != NULL; curr = next) {
-			next = TAILQ_NEXT(curr, tailq);
-        	TAILQ_REMOVE(&heap->cold_tailq.head, curr, tailq);
-			ssd_superblock_flush(curr);
-			ssd_concurrent_stack_push(&pool->vmem->stack, (void*)curr);
-        }
-
-		for (curr = TAILQ_FIRST(&heap->hot_tailq.head); curr != NULL; curr = next) {
-			next = TAILQ_NEXT(curr, tailq);
-        	TAILQ_REMOVE(&heap->hot_tailq.head, curr, tailq);
-			ssd_superblock_flush(curr);
-			ssd_concurrent_stack_push(&pool->vmem->stack, (void*)curr);
-        }
-		
 		ssd_superblock_hmap_free(&heap->hmap);
 	}
+
+	ssd_superblock_hmap_free(&pool->vmem->hmap);
 }

@@ -8,7 +8,6 @@ _HDRS =	ssd_env.h \
 		ssd_superblock_hmap.h \
 		ssd_heap.h \
 		ssd_chunk.h \
-		threadsafe_queue.h
 
 HDRS = $(patsubst %,$(HDR_DIR)/%,$(_HDRS))
 
@@ -22,21 +21,22 @@ OBJS =	main.o \
 		ssd_superblock_hmap.o \
 		ssd_heap.o \
 		ssd_chunk.o \
-		threadsafe_queue.o
 
 TEST_DIR = ../tests
 
 TESTS = test_flush.o \
 		test_malloc.o \
-		test_arbitration.o
+		test_arbitration.o \
+		test_io_queue.o \
+		test_memcpy.o
 
 LIBS = -lpthread
 
 INCLUDE = $(patsubst %,-I%,$(HDR_DIR))
 LFS = -D _LARGEFILE64_SOURCE -D _FILE_OFFSET_BITS=64
 
-#CFLAGS = $(INCLUDE) $(LFS) -g -D DEBUG -Wall -Wextra -pedantic -fsanitize=address
-CFLAGS = $(INCLUDE) $(LFS) -O3 -fomit-frame-pointer
+CFLAGS = $(INCLUDE) $(LFS) -g -D DEBUG -Wall -Wextra -pedantic -fsanitize=address
+#CFLAGS = $(INCLUDE) $(LFS) -O3 -fomit-frame-pointer
 
 app: $(OBJS) $(TESTS)
 	$(CC) -o $@ $^ $(LIBS) $(CFLAGS)

@@ -54,7 +54,7 @@ test_malloc()
 	ssd_thread_add_trid();
 
 	ssd_virtmem_pool_t virtmem_pool;
-	ssd_virtmem_init(&virtmem_pool, 2 * (sizeof(ssd_superblock_header_t) + SSD_SUPERBLOCK_CAPACITY));
+	ssd_virtmem_init(&virtmem_pool, 8 * (sizeof(ssd_superblock_header_t) + SSD_SUPERBLOCK_CAPACITY));
 
 	ssd_heap_init(&heaps, &virtmem_pool);
 

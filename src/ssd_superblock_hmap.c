@@ -24,6 +24,12 @@ ssd_superblock_hmap_init(ssd_superblock_hmap_t *hmap)
 	return 0;
 }
 
+uint32_t
+ssd_superblock_hmap_capacity(const ssd_superblock_hmap_t *hmap)
+{
+	return primes[hmap->order];
+}
+
 static void
 hmap_rehash(ssd_superblock_hmap_t *hmap);
 
@@ -71,6 +77,8 @@ ssd_superblock_hmap_suggest(ssd_superblock_hmap_t 		*hmap,
 						 	ssd_superblock_header_ptr	**it_ptr,
 						 	ssd_block_header_ptr		*block_ptr)
 {
+	*it_ptr = 0;
+
 	if (hmap->order == 0)
 		return;
 
@@ -79,29 +87,25 @@ ssd_superblock_hmap_suggest(ssd_superblock_hmap_t 		*hmap,
 	uint32_t index = bsize % capacity;
 		
 	ssd_superblock_header_ptr *it = hmap->buckets + index;
-	
 	while (*it) {
 
-		ssd_superblock_header_ptr superblock = *it;
-		
-		if (superblock->bsize == bsize) {
-
-			*block_ptr = (ssd_block_header_ptr)ssd_concurrent_stack_pop(&superblock->stack);
+		if ((*it)->bsize == bsize) {
+			*block_ptr = (ssd_block_header_ptr)ssd_concurrent_stack_pop(&((*it)->stack));
 			if (*block_ptr) {
-				*superblock_it = it;
+				*it_ptr = it;
 				return;
 			}
 		}
 
 		it = &(*it)->link;
 	}
-
-	*it_ptr = NULL;
 }
 
 ssd_superblock_header_ptr
 ssd_superblock_hmap_remove(ssd_superblock_hmap_t *hmap, ssd_superblock_header_ptr *it)
 {
+	hmap->size--;
+
 	ssd_superblock_header_ptr superblock = *it;
 	*it = superblock->link;
 	superblock->link = NULL;

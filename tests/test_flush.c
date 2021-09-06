@@ -17,13 +17,13 @@ test_flush_worker_0()
 		ssd_chunk_write_double(&chunk1, i, 0.1 * i);
 	}
 
+	atomic_store_explicit(&cond, 1, memory_order_seq_cst);
+
 	ssd_chunk_t chunk2;
+
 	ssd_chunk_init(&heaps, &chunk2, 2048);
 	printf("chunk2: superblock = %p, block = %p\n", chunk2.superblock, chunk2.block);
 	
-	atomic_store_explicit(&cond, 1, memory_order_release);
-
-
 	return 0;
 }
 
@@ -50,7 +50,7 @@ test_flush()
 	ssd_thread_add_trid();
 
 	ssd_virtmem_pool_t virtmem_pool;
-	ssd_virtmem_init(&virtmem_pool, 2 * (sizeof(ssd_superblock_header_t) + SSD_SUPERBLOCK_CAPACITY));
+	ssd_virtmem_init(&virtmem_pool, 8 * (sizeof(ssd_superblock_header_t) + SSD_SUPERBLOCK_CAPACITY));
 
 	ssd_heap_init(&heaps, &virtmem_pool);
 

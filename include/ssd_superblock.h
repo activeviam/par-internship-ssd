@@ -28,7 +28,7 @@ struct ssd_block_header_s {
 typedef struct ssd_superblock_header_s	ssd_superblock_header_t;
 typedef ssd_superblock_header_t*		ssd_superblock_header_ptr;
 
-struct ssd_superblock_header_s {	
+struct ssd_superblock_header_s {
 	ssd_superblock_header_ptr				next;
 	ssd_concurrent_stack_t					stack;
 	ssd_rwlock_t							rwlock;
@@ -36,13 +36,9 @@ struct ssd_superblock_header_s {
 	float									usage;
 	ssd_superblock_header_ptr 				link;
 	TAILQ_ENTRY(ssd_superblock_header_s)	tailq;
-	uint32_t								status;
 };
 
-void
-ssd_superblock_init(ssd_superblock_header_ptr superblock, uint32_t bsize);
-
-void
-ssd_superblock_flush(ssd_superblock_header_ptr superblock);
+int
+ssd_superblock_reinit(ssd_superblock_header_ptr superblock, uint32_t bsize);
 
 #endif

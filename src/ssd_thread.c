@@ -72,10 +72,9 @@ void
 ssd_rwlock_rdlock(ssd_rwlock_t *rwlock)
 {
 	pthread_spin_lock(&rwlock->reader);
-	if (rwlock->count == 0) {
+	if (rwlock->count++ == 0) {
 		pthread_spin_lock(&rwlock->writer);
 	}
-	rwlock->count++;
 	pthread_spin_unlock(&rwlock->reader);
 }
 
@@ -100,8 +99,7 @@ void
 ssd_rwlock_rdunlock(ssd_rwlock_t *rwlock)
 {
 	pthread_spin_lock(&rwlock->reader);
-	rwlock->count--;
-	if (rwlock->count == 0) {
+	if (--rwlock->count == 0) {
 		pthread_spin_unlock(&rwlock->writer);
 	}
 	pthread_spin_unlock(&rwlock->reader);
