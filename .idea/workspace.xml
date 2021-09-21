@@ -5,20 +5,8 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="1be14dd2-f86c-4912-8b38-b7c8578fe744" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/activeviam/chunk/AbstractSuperblockChunk.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/activeviam/reference/MemoryAllocatorWithMmap.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/activeviam/reference/Superblock.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/activeviam/reference/SuperblockManager.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/activeviam/reference/SuperblockMemoryAllocator.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/activeviam/chunk/AbstractFileChunk.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/activeviam/chunk/AbstractFileChunk.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/activeviam/chunk/DoubleChunk.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/activeviam/chunk/DoubleChunk.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/activeviam/platform/CLibrary.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/activeviam/platform/CLibrary.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/activeviam/platform/LinuxPlatform.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/activeviam/platform/LinuxPlatform.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/activeviam/reference/ABlockAllocator.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/activeviam/reference/ABlockAllocator.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/activeviam/chunk/AbstractSuperblockChunk.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/activeviam/chunk/AbstractSuperblockChunk.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/com/activeviam/reference/BlockAllocatorManager.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/activeviam/reference/BlockAllocatorManager.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/activeviam/reference/BlockAllocatorOnFile.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/activeviam/reference/BlockAllocatorOnFile.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/activeviam/reference/MemoryAllocatorOnFile.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/activeviam/reference/AMemoryAllocatorOnFile.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/test/java/TestMemoryAllocatorOnFile.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/TestMemoryAllocatorOnFile.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />

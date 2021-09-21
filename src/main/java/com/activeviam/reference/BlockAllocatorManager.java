@@ -149,9 +149,8 @@ public class BlockAllocatorManager implements IBlockAllocator {
 
   @Override
   public void free(final long address) {
-    for (;;) {
-      final var it = this.blocks.iterator();
-      while (it.hasNext()) {
+    final var it = this.blocks.iterator();
+    while (it.hasNext()) {
         final var allocator = it.next();
         if (allocator.blockAddress <= address && address < allocator.blockAddress + allocator.blockSize) {
           allocator.free(address);
