@@ -7,19 +7,20 @@
 
 package com.activeviam.chunk;
 
-import com.activeviam.reference.MemoryAllocatorOnFile;
+import com.activeviam.reference.MemoryAllocatorWithMmap;
+
 import java.io.Closeable;
 
-abstract class AbstractFileChunk<K> implements Chunk<K>, Closeable {
+public abstract class AbstractFileChunk<K> implements Chunk<K>, Closeable {
 
 	private final int capacity;
-
-	private final MemoryAllocatorOnFile allocator;
-	long ptr;
+	private final MemoryAllocatorWithMmap allocator;
 	private final long blockSize;
 
+	long ptr;
+
 	public AbstractFileChunk(
-			final MemoryAllocatorOnFile allocator, final int capacity, final long blockSize) {
+			final MemoryAllocatorWithMmap allocator, final int capacity, final long blockSize) {
 		this.capacity = capacity;
 		this.allocator = allocator;
 		this.blockSize = blockSize;

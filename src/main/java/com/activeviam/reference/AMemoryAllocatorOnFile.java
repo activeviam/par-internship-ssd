@@ -10,10 +10,10 @@ import java.util.Map;
 import java.util.logging.Logger;
 
 /** @author ActiveViam */
-public class MemoryAllocatorOnFile implements MemoryAllocator, Closeable {
+public abstract class AMemoryAllocatorOnFile implements MemoryAllocator, Closeable {
 
   /** Class logger. */
-  private static final Logger logger = Logger.getLogger("allocator");
+  protected static final Logger logger = Logger.getLogger("allocator");
 
   /**
    * It is the default value for <i>max_map_count</i> for Linux. We use is as a reference to size
@@ -37,9 +37,9 @@ public class MemoryAllocatorOnFile implements MemoryAllocator, Closeable {
     RATIO = DEFAULT_NATIVE_MEMORY_CACHE_RATIO;
   }
 
-  private final LinuxPlatform platform;
+  protected final LinuxPlatform platform;
 
-  private final Path dir;
+  protected final Path dir;
 
   /** {@link IBlockAllocator Allocators} currently available (one per size of chunks). */
   protected volatile Map<Long, IBlockAllocator> allocators;
@@ -50,7 +50,7 @@ public class MemoryAllocatorOnFile implements MemoryAllocator, Closeable {
   protected final long virtualBlockSize;
 
   /** @param dir the directory where to allocate the memory mapped files */
-  public MemoryAllocatorOnFile(final Path dir) {
+  public AMemoryAllocatorOnFile(final Path dir) {
     this.platform = LinuxPlatform.getInstance();
     this.dir = dir;
     this.dir.toFile().mkdirs();
@@ -72,23 +72,13 @@ public class MemoryAllocatorOnFile implements MemoryAllocator, Closeable {
     return this.platform.getAvailableVirtualMemory() / MAX_MAP_COUNT;
   }
 
-  @Override
-  public long allocateMemory(final long bytes) {
-    return getOrCreateAllocator(bytes).allocate();
-  }
-
-  @Override
-  public void freeMemory(final long address, final long bytes) {
-    getOrCreateAllocator(bytes).free(address);
-  }
-
   /**
    * Lazily allocate the allocator.
    *
    * @param bytes the number of bytes to be allocated
    * @return the allocator to use
    */
-  private IBlockAllocator getOrCreateAllocator(final long bytes) {
+  protected IBlockAllocator getOrCreateAllocator(final long bytes) {
     final Long mappedSize = getMappedSize(bytes);
     var existingAllocator = this.allocators.get(mappedSize);
     if (existingAllocator != null) {
@@ -102,19 +92,11 @@ public class MemoryAllocatorOnFile implements MemoryAllocator, Closeable {
 
       final var newAllocator = createAllocator(bytes, mappedSize);
       this.allocators.put(mappedSize, newAllocator);
+
       return newAllocator;
     }
   }
 
-  /**
-   * Compute the amount of memory that each chunk will need. The computation is based on the size of
-   * the chunk (in bytes) and is round up to the first multiple of {@link UnsafeUtil#pageSize()}.
-   *
-   * <p>E.g: size = 6144, 8192 is returned (for pageSize = 4096 bytes).
-   *
-   * @param size size of a chunk
-   * @return the real amount of memory that will be used.
-   */
   protected long getMappedSize(final long size) {
     final long pSize = MemoryAllocator.PAGE_SIZE;
     if (pSize >= size) {
@@ -147,14 +129,7 @@ public class MemoryAllocatorOnFile implements MemoryAllocator, Closeable {
         createBlockAllocatorFactory(), mappedSize, this.virtualBlockSize);
   }
 
-  private IBlockAllocatorFactory createBlockAllocatorFactory() {
-    // Ignore the nodeId as the threads that allocate the memory are already bound to this node
-    return (size, blockSize, useHugePage) -> {
-      final var ba = new BlockAllocatorOnFile(this.dir, size, blockSize, useHugePage);
-      ba.init();
-      return ba;
-    };
-  }
+  protected abstract IBlockAllocatorFactory createBlockAllocatorFactory();
 
   protected interface IBlockAllocatorFactory {
 

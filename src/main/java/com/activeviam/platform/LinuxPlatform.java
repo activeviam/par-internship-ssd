@@ -270,6 +270,22 @@ public class LinuxPlatform {
     }
   }
 
+  public void mlock(long addr, long length) {
+    if (cLib.mlock(addr, length) == cLib.LOCK_FAILED) {
+      final int errno = SaferNative.getLastError();
+      switch (errno) {
+        case Errno.EINVAL:
+          throw new IllegalArgumentException("Address was not a multiple of page size: " + addr);
+        case Errno.ENOMEM:
+          throw new IllegalArgumentException("Pages are not mapped");
+        case Errno.EAGAIN:
+          throw new RuntimeException("Some or all of the specified address range could not be locked");
+        default:
+          Errno.throwLastError("mlock", addr, length);
+      }
+    }
+  }
+
   public long mmapFile(int fd, long size, boolean useHugePage) {
     if (cLib == null) {
       throw new RuntimeException(
@@ -308,6 +324,49 @@ public class LinuxPlatform {
       cLib.madvise(ptr, size, CLibrary.MADV_HUGEPAGE);
     }
     return ptr;
+  }
+
+  public long mmapAnon(long size, boolean useHugePage) {
+    if (cLib == null) {
+      throw new RuntimeException(
+              "C Library could not be loaded on your system. Calls to mmap are not available.");
+    }
+    if (size < 0) {
+      throw new IllegalArgumentException("Cannot allocate a negative size, was " + size);
+    }
+
+    final int prot = CLibrary.PROT_READ | CLibrary.PROT_WRITE;
+    final int flags = CLibrary.MAP_PRIVATE | CLibrary.MAP_ANONYMOUS;
+
+    // All Linux distro should support MAP_ANONYMOUS, so no need to create a mapping in /dev/zero.
+    final long ptr = cLib.mmap(0, size, prot, flags, -1, 0);
+
+    if (ptr != CLibrary.MAP_FAILED && cLib.mlock(ptr, size) != CLibrary.LOCK_FAILED) {
+      return ptr;
+    }
+
+    final int errno = SaferNative.getLastError();
+    switch (errno) {
+      case Errno.EINVAL:
+        throw new IllegalArgumentException("Invalid length: was " + size);
+      case Errno.ENOMEM:
+        throw new OutOfMemoryError(
+                "No memory is available, or the process's maximum number of mappings has exceeded. Could not allocate "
+                        + size);
+      case Errno.EBADF:
+        throw new RuntimeException("Your system does not support map anonymous. (" + size + ")");
+      default:
+        Errno.throwLastError(
+                "mmap",
+                0,
+                size,
+                prot,
+                flags,
+                -1,
+                0);
+    }
+
+    return 0;
   }
 
   /** @return array in bytes of available page sizes sorted in ascending order. */

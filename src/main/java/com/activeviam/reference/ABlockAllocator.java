@@ -55,32 +55,28 @@ public abstract class ABlockAllocator implements IBlockAllocator {
   protected volatile int count;
 
   /**
-   * boolean to indicate huge pages (if supported) can be requested when allocating block of memory
-   */
-  protected final boolean useHugePage;
-
-  /**
    * Default constructor.
    *
    * @param size Size of memory (in bytes) that will be allocated when calling {@link #allocate()}.
    * @param blockSize amount of virtual memory to reserve for an entire block
-   * @param useHugePage true to indicate to the system that it should use huge pages (if it supports
-   *     them).
    */
-  public ABlockAllocator(final long size, final long blockSize, final boolean useHugePage) {
+  public ABlockAllocator(final long size, final long blockSize) {
     this.size = size;
     this.blockSize = blockSize;
-    this.useHugePage = useHugePage;
     this.capacity = (int) (blockSize / size);
     this.items = new ConcurrentUniqueIntegerStack(this.capacity);
     this.count = 0;
   }
 
   /** Must be called once before using {@link #allocate()}. */
-  public void init() {
+  public boolean init() {
     final long blockPtr = virtualAlloc(this.blockSize);
+    if (blockPtr == NULL_POINTER) {
+      return false;
+    }
     this.blockAddress = blockPtr;
     this.lastAddress = blockPtr;
+    return true;
   }
 
   @Override
@@ -113,22 +109,31 @@ public abstract class ABlockAllocator implements IBlockAllocator {
   @Override
   public long allocate() {
     long ptr;
+    boolean unused = false;
 
-    // Otherwise, take a new one
-    do {
-      /*
-       * Check to avoid unnecessary CASes by checking
-       * first the pointer do not exceed the block
-       * capacity.
-       * The last pointer an allocation can reclaim is
-       * equal to:
-       *
-       * ptr = blockAddress + blockSize - size
-       */
-      if ((ptr = this.lastAddress) >= this.blockAddress + this.blockSize) {
-        return NULL_POINTER;
-      }
-    } while (!casLastAddress(this, ptr, ptr + this.size));
+    final int popped = items.pop();
+
+    if (popped != ConcurrentUniqueIntegerStack.NULL) {
+      // Take an address from the ones already used but freed
+      ptr = getAddress(popped);
+
+    } else {
+      // Otherwise, take a new one
+      do {
+        /*
+         * Check to avoid unnecessary CASes by checking first the pointer do not exceed
+         * the block capacity.
+         * The last pointer an allocation can reclaim is equal to:
+         * ptr = blockAddress + blockSize - size;
+         */
+        if ((ptr = lastAddress) >= blockAddress + blockSize) {
+          return NULL_POINTER;
+        }
+
+      } while (!casLastAddress(this, ptr, ptr + size));
+
+      unused = true;
+    }
 
     // Increment the counter.
     int newC;
@@ -137,24 +142,22 @@ public abstract class ABlockAllocator implements IBlockAllocator {
       if (newC < 0) return NULL_POINTER; // abort allocation
     } while (!casCount(this, newC, newC + 1));
 
-    doAllocate(ptr, this.size);
+    if (unused) {
+      doAllocate(ptr, size);
+    }
 
     return ptr;
   }
 
   @Override
   public void free(final long address) {
-    final boolean cacheUsed;
-    final ConcurrentUniqueIntegerStack stack; // the stack to use
     // Decommit before pushing the pointer in the stack to
     // prevent another thread to retrieve the pointer before
     // decommitting and start writing/ using this piece of mem.
     doFree(address, this.size);
-    cacheUsed = false;
-    stack = this.items;
 
     // Store address for later usage
-    if (stack.push(getPosition(address))) {
+    if (this.items.push(getPosition(address))) {
       // If the push succeeds, decrements the counter
       // The stack used guarantees that concurrent calls on free()
       // with the same value does not decrement multiple times

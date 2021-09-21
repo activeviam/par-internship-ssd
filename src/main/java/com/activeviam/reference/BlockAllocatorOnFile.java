@@ -23,6 +23,11 @@ class BlockAllocatorOnFile extends ABlockAllocator {
   protected final Path path;
 
   /**
+   * boolean to indicate huge pages (if supported) can be requested when allocating block of memory
+   */
+  protected final boolean useHugePage;
+
+  /**
    * Default constructor.
    *
    * @param size Size of memory (in bytes) that will be allocated when calling {@link #allocate()}.
@@ -31,7 +36,9 @@ class BlockAllocatorOnFile extends ABlockAllocator {
    *     them).
    */
   public BlockAllocatorOnFile(Path dir, long size, long blockSize, boolean useHugePage) {
-    super(size, blockSize, useHugePage);
+    super(size, blockSize);
+    this.useHugePage = useHugePage;
+
     if ((size % MemoryAllocator.PAGE_SIZE) != 0) {
       throw new IllegalArgumentException(size + " " + MemoryAllocator.PAGE_SIZE);
     }

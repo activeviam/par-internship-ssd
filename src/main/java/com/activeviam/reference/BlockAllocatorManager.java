@@ -9,8 +9,8 @@ package com.activeviam.reference;
 
 import com.activeviam.UnsafeUtil;
 import com.activeviam.platform.LinuxPlatform;
-import com.activeviam.reference.MemoryAllocatorOnFile.IBlockAllocatorFactory;
-import java.util.concurrent.CopyOnWriteArrayList;
+
+import java.util.concurrent.ConcurrentLinkedDeque;
 
 /**
  * Does implement {@link IBlockAllocator} but it delegate all its call to a {@link IBlockAllocator}
@@ -21,7 +21,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 public class BlockAllocatorManager implements IBlockAllocator {
 
   /** List of all underlying managed allocators */
-  private final CopyOnWriteArrayList<ABlockAllocator> blocks;
+  private final ConcurrentLinkedDeque<ABlockAllocator> blocks;
 
   /** Size of memory (in bytes) that will be allocated when calling {@link #allocate()}. */
   private final long size;
@@ -29,19 +29,14 @@ public class BlockAllocatorManager implements IBlockAllocator {
   /** The amount of virtual memory to reserve for a block */
   private final long virtualBlockSize;
 
-  /**
-   * Protection to not allocate two blocks of memory if two calls on {@link #allocate()} are made
-   * when all blocks are full. They are only two acceptable values for this attributes: If the value
-   * is 1, a new {@link ABlockAllocator} is going to be allocate. 0 if not.
-   */
-  private volatile int ongoingCreationProcess;
+  private volatile int ongoingSwapOfFullAllocator;
 
   /**
    * boolean to indicate huge pages (if supported) can be requested when allocating block of memory
    */
   private final boolean useHugePage;
 
-  private final IBlockAllocatorFactory allocatorFactory;
+  private final AMemoryAllocatorOnFile.IBlockAllocatorFactory allocatorFactory;
 
   /**
    * Default constructor.
@@ -51,11 +46,11 @@ public class BlockAllocatorManager implements IBlockAllocator {
    *     call to {@link #allocate()} will take a portion of it.
    */
   public BlockAllocatorManager(
-      final IBlockAllocatorFactory factory, final long size, final long virtualBlockSize) {
+          final AMemoryAllocatorOnFile.IBlockAllocatorFactory factory, final long size, final long virtualBlockSize) {
     this.allocatorFactory = factory;
     this.size = size;
     this.virtualBlockSize = computeBlockSizeAsMultipleOfSize(this.size, virtualBlockSize);
-    this.blocks = new CopyOnWriteArrayList<>(); // Lazily add elements to the list
+    this.blocks = new ConcurrentLinkedDeque<>(); // Lazily add elements to the list
     this.useHugePage = canUseHugePage();
   }
 
@@ -109,67 +104,74 @@ public class BlockAllocatorManager implements IBlockAllocator {
 
   @Override
   public long allocate() {
+
     long ptr;
+
     do {
-      if ((ptr = tryAllocate()) != NULL_POINTER) return ptr;
 
-      if (casOngoingCreationProcess(this, 0, 1)) {
-        // From that point, no block can be created by another thread.
+      if ((ptr = this.blocks.peekFirst().allocate()) != NULL_POINTER) {
+        return ptr;
+      }
+
+      if (casOngoingSwapOfFullAllocator(this, 0, 1)) {
         try {
-          // Once the CAS succeeds, check no block have been
-          // created since the end of the for loop
-          if ((ptr = tryAllocate()) != NULL_POINTER) return ptr;
+          ABlockAllocator first = this.blocks.getFirst();
+          if ((ptr = first.allocate()) != NULL_POINTER) {
+            this.blocks.addFirst(first);
+            return ptr;
+          } else {
 
-          // Need to extend the overall capacity i.e create a new block.
-          final ABlockAllocator newBlock = createBlockAllocator();
-          // IMPORTANT !! Make the allocation first before adding the new block
-          // to the block list to make sure this allocation will succeed.
-          ptr = newBlock.allocate();
-          this.blocks.add(newBlock); // From that point, the new block is visible by other threads
+            this.blocks.addLast(first);
+            if ((ptr = this.blocks.peekFirst().allocate()) != NULL_POINTER) {
+              return ptr;
+            }
+
+            ABlockAllocator newBlock;
+            if ((newBlock = createBlockAllocator()) == null) {
+              return NULL_POINTER;
+            }
+
+            try {
+              ptr = newBlock.allocate();
+            } finally {
+              this.blocks.addFirst(newBlock);
+            }
+          }
         } finally {
-          this.ongoingCreationProcess = 0; // restore the value
+          this.ongoingSwapOfFullAllocator = 0;
         }
       }
+
     } while (ptr == NULL_POINTER);
 
     return ptr;
   }
 
-  /**
-   * Try to allocate a piece of memory of size {@link #size}: iterate over all {@link
-   * ABlockAllocator underlying allocators} until one of them succeeds to allocate.
-   *
-   * @return The pointer to this allocated memory. If the allocation failed it return a {@link
-   *     IBlockAllocator#NULL_POINTER}.
-   */
-  private long tryAllocate() {
-    long ptr;
-    for (final var block : this.blocks) {
-      if ((ptr = block.allocate()) != NULL_POINTER) return ptr;
-    }
-    return NULL_POINTER;
-  }
-
   @Override
   public void free(final long address) {
-    for (final var b : this.blocks) {
-      // Need to find the block an address belongs to
-      if (b.blockAddress <= address && address < b.blockAddress + b.blockSize) {
-        b.free(address);
-        if (b.tryRelease()) {
-          // If tryRelease succeed, remove b from the block list
-          this.blocks.remove(b);
+    for (;;) {
+      final var it = this.blocks.iterator();
+      while (it.hasNext()) {
+        final var allocator = it.next();
+        if (allocator.blockAddress <= address && address < allocator.blockAddress + allocator.blockSize) {
+          allocator.free(address);
+          it.remove();
+          if (!allocator.tryRelease()) {
+            this.blocks.addFirst(allocator);
+          } else {
+            released = true;
+          }
+          return;
         }
-        return;
       }
     }
   }
 
   @Override
   public void release() {
-    for (final var b : this.blocks) {
-      b.release();
-      this.blocks.remove(b);
+    for (final var allocator : this.blocks) {
+      allocator.release();
+      this.blocks.remove(allocator);
     }
   }
 
@@ -185,21 +187,13 @@ public class BlockAllocatorManager implements IBlockAllocator {
         + "]";
   }
 
-  private static final long ongoingCreationProcessOffset =
-      UnsafeUtil.getFieldOffset(BlockAllocatorManager.class, "ongoingCreationProcess");
+  private static final long ongoingSwapOfFullAllocatorOffset =
+          UnsafeUtil.getFieldOffset(BlockAllocatorManager.class, "ongoingSwapOfFullAllocator");
 
-  /**
-   * Static wrappers for UNSAFE methods {@link UnsafeUtil#compareAndSwapInt(Object, long, int, int)}
-   * with <code>creationCount = </code>{@link #ongoingCreationProcess}.
-   *
-   * <p>Hopefully it will be in-lined ...
-   *
-   * @return true if successful. false return indicates that the actual value was not equal to the
-   *     expected value.
-   */
-  private static final boolean casOngoingCreationProcess(
-      final BlockAllocatorManager blockAllocatorManager, final int expect, final int update) {
+  private static final boolean casOngoingSwapOfFullAllocator(
+          final BlockAllocatorManager blockAllocatorManager, final int expect, final int update) {
     return UnsafeUtil.compareAndSwapInt(
-        blockAllocatorManager, ongoingCreationProcessOffset, expect, update);
+            blockAllocatorManager, ongoingSwapOfFullAllocatorOffset, expect, update);
   }
+
 }

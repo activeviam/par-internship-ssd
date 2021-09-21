@@ -22,6 +22,7 @@ interface CLibrary extends Library {
   // From /usr/include/sys/mman.h
   ///////////////////////////////////////////////
   static final int MAP_FAILED = -1;
+  static final int LOCK_FAILED = -1;
 
   ///////////////////////////////////////////////
   // From /usr/include/asm-generic/mman.h
@@ -266,6 +267,9 @@ interface CLibrary extends Library {
    */
   // int munmap(void *addr, size_t length);
   int munmap(long addr, long length);
+
+  // int mlock(void *addr, size_t length);
+  int mlock(long addr, long length);
 
   /**
    * The madvise() system call advises the kernel about how to handle paging input/output in the
