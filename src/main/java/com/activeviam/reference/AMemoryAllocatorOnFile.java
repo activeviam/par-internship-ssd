@@ -1,6 +1,7 @@
 package com.activeviam.reference;
 
 import com.activeviam.MemoryAllocator;
+import com.activeviam.UnsafeUtil;
 import com.activeviam.platform.LinuxPlatform;
 import java.io.Closeable;
 import java.nio.file.Path;
@@ -11,7 +12,6 @@ import java.util.logging.Logger;
 
 /** @author ActiveViam */
 public abstract class AMemoryAllocatorOnFile implements MemoryAllocator, Closeable {
-
   /** Class logger. */
   protected static final Logger logger = Logger.getLogger("allocator");
 
@@ -39,7 +39,7 @@ public abstract class AMemoryAllocatorOnFile implements MemoryAllocator, Closeab
 
   protected final LinuxPlatform platform;
 
-  protected final Path dir;
+  public final Path dir;
 
   /** {@link IBlockAllocator Allocators} currently available (one per size of chunks). */
   protected volatile Map<Long, IBlockAllocator> allocators;
@@ -98,7 +98,7 @@ public abstract class AMemoryAllocatorOnFile implements MemoryAllocator, Closeab
   }
 
   protected long getMappedSize(final long size) {
-    final long pSize = MemoryAllocator.PAGE_SIZE;
+    final long pSize = PAGE_SIZE;
     if (pSize >= size) {
       return size;
     } else {
@@ -107,21 +107,16 @@ public abstract class AMemoryAllocatorOnFile implements MemoryAllocator, Closeab
     }
   }
 
-  /**
-   * @param bytes the number of bytes to be allocated
-   * @param mappedSize associated to the new allocator. The size if expected to be a multiple of
-   *     {@link MemoryAllocator#PAGE_SIZE}. Computed by {@link #getMappedSize(long)}.
-   * @return the new {@link IBlockAllocator allocator}
-   */
+
   protected IBlockAllocator createAllocator(final long bytes, final long mappedSize) {
     // Log if not multiple of page size.
-    if (bytes > MemoryAllocator.PAGE_SIZE && (bytes % MemoryAllocator.PAGE_SIZE) != 0) {
+    if (bytes > PAGE_SIZE && (bytes % PAGE_SIZE) != 0) {
       logger.warning(
           "Trying to allocate a chunk of size "
               + bytes
               + " bytes (not a multiple "
               + "of "
-              + MemoryAllocator.PAGE_SIZE
+              + PAGE_SIZE
               + " bytes (memory page)).");
     }
 

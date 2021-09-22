@@ -7,6 +7,8 @@
 
 package com.activeviam.reference;
 
+import com.activeviam.MemoryAllocator;
+
 /**
  * An allocator effective to allocate a fixed amount of memory among a reserved and sized block of
  * memory.
@@ -27,14 +29,14 @@ public interface IBlockAllocator {
    * @return The pointer to this allocated memory. If the allocation failed it return a {@link
    *     #NULL_POINTER}.
    */
-  long allocate();
+  MemoryAllocator.ReturnValue allocate();
 
   /**
    * Dispose of a piece of memory obtained from {@link #allocate()}
    *
    * @param address The address of the memory to free
    */
-  void free(long address);
+  void free(MemoryAllocator.ReturnValue value);
 
   /**
    * Release all memory reserved by this block.

@@ -8,7 +8,6 @@ package com.activeviam.chunk;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.activeviam.MemoryAllocator;
 import java.util.stream.IntStream;
 import org.assertj.core.api.SoftAssertions;
 import org.junit.jupiter.api.Test;

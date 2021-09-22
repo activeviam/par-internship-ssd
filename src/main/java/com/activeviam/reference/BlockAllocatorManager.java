@@ -7,6 +7,7 @@
 
 package com.activeviam.reference;
 
+import com.activeviam.MemoryAllocator;
 import com.activeviam.UnsafeUtil;
 import com.activeviam.platform.LinuxPlatform;
 
@@ -103,22 +104,22 @@ public class BlockAllocatorManager implements IBlockAllocator {
   }
 
   @Override
-  public long allocate() {
+  public MemoryAllocator.ReturnValue allocate() {
 
-    long ptr;
+    MemoryAllocator.ReturnValue value;
 
     do {
 
-      if ((ptr = this.blocks.peekFirst().allocate()) != NULL_POINTER) {
-        return ptr;
+      if ((value = this.blocks.peekFirst().allocate()) != null) {
+        return value;
       }
 
       if (casOngoingSwapOfFullAllocator(this, 0, 1)) {
         try {
           ABlockAllocator first = this.blocks.getFirst();
-          if ((ptr = first.allocate()) != NULL_POINTER) {
+          if ((value = first.allocate()) != null) {
             this.blocks.addFirst(first);
-            return ptr;
+            return value;
           } else {
 
             this.blocks.addLast(first);
@@ -151,17 +152,14 @@ public class BlockAllocatorManager implements IBlockAllocator {
   public void free(final long address) {
     final var it = this.blocks.iterator();
     while (it.hasNext()) {
-        final var allocator = it.next();
-        if (allocator.blockAddress <= address && address < allocator.blockAddress + allocator.blockSize) {
-          allocator.free(address);
-          it.remove();
-          if (!allocator.tryRelease()) {
-            this.blocks.addFirst(allocator);
-          } else {
-            released = true;
-          }
-          return;
+      final var allocator = it.next();
+      if (allocator.blockAddress <= address && address < allocator.blockAddress + allocator.blockSize) {
+        allocator.free(address);
+        it.remove();
+        if (!allocator.tryRelease()) {
+          this.blocks.addFirst(allocator);
         }
+        return;
       }
     }
   }

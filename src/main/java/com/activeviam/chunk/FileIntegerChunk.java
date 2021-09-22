@@ -7,7 +7,6 @@
 
 package com.activeviam.chunk;
 
-import com.activeviam.MemoryAllocator;
 import com.activeviam.UnsafeUtil;
 import com.activeviam.reference.MemoryAllocatorOnFile;
 import java.util.BitSet;
@@ -15,14 +14,13 @@ import java.util.logging.Logger;
 
 public class FileIntegerChunk extends AbstractFileChunk<Integer> implements IntegerChunk {
 
-
 	/** Unsafe provider. */
 	private static final sun.misc.Unsafe UNSAFE = UnsafeUtil.getUnsafe();
 
 	/** The order of the size in bytes of an element. */
 	private static final int ELEMENT_SIZE_ORDER = 2;
 
-	public FileIntegerChunk(final MemoryAllocatorOnFile allocator, final int capacity) {
+	public FileIntegerChunk(final AMemoryAllocatorOnFile allocator, final int capacity) {
 		super(allocator, capacity, computeBlockSize(capacity));
 	}
 

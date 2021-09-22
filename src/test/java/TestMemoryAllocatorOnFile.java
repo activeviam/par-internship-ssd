@@ -5,7 +5,6 @@
  * reproduction or transfer of this material is strictly prohibited
  */
 
-import com.activeviam.MemoryAllocator;
 import com.activeviam.reference.MemoryAllocatorOnFile;
 import java.nio.file.Path;
 

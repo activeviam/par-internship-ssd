@@ -1,6 +1,5 @@
 package com.activeviam.reference;
 
-import com.activeviam.MemoryAllocator;
 import com.activeviam.platform.LinuxPlatform;
 import java.io.File;
 import java.io.IOException;
@@ -10,6 +9,8 @@ import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.LongSupplier;
+
+import static com.activeviam.reference.AMemoryAllocatorOnFile.PAGE_SIZE;
 
 class BlockAllocatorOnFile extends ABlockAllocator {
 
@@ -39,8 +40,8 @@ class BlockAllocatorOnFile extends ABlockAllocator {
     super(size, blockSize);
     this.useHugePage = useHugePage;
 
-    if ((size % MemoryAllocator.PAGE_SIZE) != 0) {
-      throw new IllegalArgumentException(size + " " + MemoryAllocator.PAGE_SIZE);
+    if ((size % PAGE_SIZE) != 0) {
+      throw new IllegalArgumentException(size + " " + PAGE_SIZE);
     }
     this.path = dir.resolve("hugefile_" + size + "_" + ID_GENERATOR.getAsLong());
     try {

@@ -1,30 +1,38 @@
 package com.activeviam.reference;
 
+import com.activeviam.MemoryAllocator;
+
 import java.nio.file.Path;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+
 import static com.activeviam.reference.IBlockAllocator.NULL_POINTER;
 
 public class SuperblockMemoryAllocator extends AMemoryAllocatorOnFile {
 
     protected final SuperblockManager storage;
+    protected final ReadWriteLock rwlock;
 
     public SuperblockMemoryAllocator(final Path dir, final SuperblockManager storage) {
         super(dir);
         this.storage = storage;
+        this.rwlock = new ReentrantReadWriteLock();
     }
 
+
     @Override
-    public long allocateMemory(long bytes) {
-        long ptr;
-        if ((ptr = getOrCreateAllocator(bytes).allocate()) == NULL_POINTER) {
+    public MemoryAllocator.ReturnValue allocateMemory(long bytes) {
+        MemoryAllocator.ReturnValue value = getOrCreateAllocator(bytes).allocate();
+        while (value.ptr == NULL_POINTER) {
             garbageCollect();
-            return getOrCreateAllocator(bytes).allocate();
+            value = getOrCreateAllocator(bytes).allocate();
         }
-        return ptr;
+        return value;
     }
 
     @Override
-    public void freeMemory(final long address, final long bytes) {
-        getOrCreateAllocator(bytes).free(address);
+    public void freeMemory(MemoryAllocator.ReturnValue value) {
+        value.blockAllocator.free(value.ptr);
     }
 
     @Override
@@ -43,4 +51,5 @@ public class SuperblockMemoryAllocator extends AMemoryAllocatorOnFile {
     private void garbageCollect() {
 
     }
+
 }

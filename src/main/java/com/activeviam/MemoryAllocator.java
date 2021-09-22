@@ -7,10 +7,21 @@
 
 package com.activeviam;
 
+import com.activeviam.reference.ABlockAllocator;
+
 public interface MemoryAllocator {
 
   /** The native page size. */
   long PAGE_SIZE = UnsafeUtil.pageSize();
+
+  public class ReturnValue {
+    final ABlockAllocator blockAllocator;
+    final long ptr;
+    ReturnValue(final ABlockAllocator blockAllocator, final long ptr) {
+      this.blockAllocator = blockAllocator;
+      this.ptr = ptr;
+    }
+  };
 
   /**
    * Allocates a new block of static final memory, of the given size in bytes.
@@ -31,7 +42,7 @@ public interface MemoryAllocator {
    * @throws OutOfMemoryError if the allocation is refused by the system, because of a resource
    *     constraint.
    */
-  long allocateMemory(long bytes);
+  ReturnValue allocateMemory(long bytes);
 
   /**
    * Disposes of a block of static final memory obtained from {@link #allocateMemory}.
@@ -42,5 +53,5 @@ public interface MemoryAllocator {
    *     that bytes corresponds to the number of bytes passed to allocateMemory, otherwise memory is
    *     leaked.
    */
-  void freeMemory(long address, long bytes);
+  void freeMemory(ReturnValue value);
 }

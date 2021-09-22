@@ -7,6 +7,7 @@
 
 package com.activeviam.reference;
 
+import com.activeviam.MemoryAllocator;
 import com.activeviam.UnsafeUtil;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -107,7 +108,8 @@ public abstract class ABlockAllocator implements IBlockAllocator {
   }
 
   @Override
-  public long allocate() {
+  public  MemoryAllocator.ReturnValue allocate() {
+
     long ptr;
     boolean unused = false;
 
@@ -127,7 +129,7 @@ public abstract class ABlockAllocator implements IBlockAllocator {
          * ptr = blockAddress + blockSize - size;
          */
         if ((ptr = lastAddress) >= blockAddress + blockSize) {
-          return NULL_POINTER;
+          return null;
         }
 
       } while (!casLastAddress(this, ptr, ptr + size));
@@ -146,7 +148,7 @@ public abstract class ABlockAllocator implements IBlockAllocator {
       doAllocate(ptr, size);
     }
 
-    return ptr;
+    return new MemoryAllocator.ReturnValue(this, ptr);
   }
 
   @Override

@@ -5,8 +5,23 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="1be14dd2-f86c-4912-8b38-b7c8578fe744" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/activeviam/MemoryAllocator.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/activeviam/MemoryAllocator.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/com/activeviam/chunk/AbstractSuperblockChunk.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/activeviam/chunk/AbstractSuperblockChunk.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/activeviam/chunk/FileDoubleChunk.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/activeviam/chunk/FileDoubleChunk.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/activeviam/chunk/FileIntegerChunk.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/activeviam/chunk/FileIntegerChunk.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/activeviam/reference/ABlockAllocator.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/activeviam/reference/ABlockAllocator.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/activeviam/reference/AMemoryAllocatorOnFile.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/activeviam/reference/AMemoryAllocatorOnFile.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/com/activeviam/reference/BlockAllocatorManager.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/activeviam/reference/BlockAllocatorManager.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/activeviam/reference/BlockAllocatorOnFile.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/activeviam/reference/BlockAllocatorOnFile.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/activeviam/reference/IBlockAllocator.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/activeviam/reference/IBlockAllocator.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/activeviam/reference/Superblock.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/activeviam/reference/Superblock.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/activeviam/reference/SuperblockMemoryAllocator.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/activeviam/reference/SuperblockMemoryAllocator.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/test/java/TestMemoryAllocatorOnFile.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/TestMemoryAllocatorOnFile.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/test/java/com/activeviam/chunk/SpecTestDoubleChunk.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/com/activeviam/chunk/SpecTestDoubleChunk.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/test/java/com/activeviam/chunk/SpecTestIntegerChunk.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/com/activeviam/chunk/SpecTestIntegerChunk.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/test/java/com/activeviam/chunk/TestFileDoubleChunk.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/com/activeviam/chunk/TestFileDoubleChunk.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/test/java/com/activeviam/chunk/TestFileIntegerChunk.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/com/activeviam/chunk/TestFileIntegerChunk.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -50,17 +65,6 @@
       <option name="MAIN_CLASS_NAME" value="TestMemoryAllocatorOnFile" />
       <option name="METHOD_NAME" value="testAllocatingBlock(java.nio.file.Path)" />
       <option name="TEST_OBJECT" value="method" />
-      <method v="2">
-        <option name="Make" enabled="true" />
-      </method>
-    </configuration>
-    <configuration default="true" type="JetRunConfigurationType">
-      <method v="2">
-        <option name="Make" enabled="true" />
-      </method>
-    </configuration>
-    <configuration default="true" type="KotlinStandaloneScriptRunConfigurationType">
-      <option name="filePath" />
       <method v="2">
         <option name="Make" enabled="true" />
       </method>
