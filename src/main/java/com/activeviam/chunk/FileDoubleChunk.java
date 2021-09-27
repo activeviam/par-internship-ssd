@@ -8,10 +8,11 @@
 package com.activeviam.chunk;
 
 import com.activeviam.UnsafeUtil;
-import com.activeviam.reference.MemoryAllocatorOnFile;
 import com.activeviam.reference.MemoryAllocatorWithMmap;
 
 import java.util.logging.Logger;
+
+import static com.activeviam.MemoryAllocator.PAGE_SIZE;
 
 public class FileDoubleChunk extends AbstractFileChunk<Double> implements DoubleChunk {
 
@@ -24,11 +25,11 @@ public class FileDoubleChunk extends AbstractFileChunk<Double> implements Double
 
   private static long computeBlockSize(final int capacity) {
     final var minSize = capacity << ELEMENT_SIZE_ORDER;
-    if (minSize % MemoryAllocator.PAGE_SIZE == 0) {
+    if (minSize % PAGE_SIZE == 0) {
       return minSize;
     } else {
       // Find the closest multiple of PAGE_SIZE
-      final var size = ((minSize / MemoryAllocator.PAGE_SIZE) + 1) * MemoryAllocator.PAGE_SIZE;
+      final var size = ((minSize / PAGE_SIZE) + 1) * PAGE_SIZE;
       Logger.getLogger("chunk").warning("Wasting " + (size - minSize) + " bytes");
       return size;
     }

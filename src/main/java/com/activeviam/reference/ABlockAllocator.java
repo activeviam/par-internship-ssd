@@ -9,6 +9,8 @@ package com.activeviam.reference;
 
 import com.activeviam.MemoryAllocator;
 import com.activeviam.UnsafeUtil;
+
+import java.util.concurrent.locks.ReadWriteLock;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -25,14 +27,12 @@ public abstract class ABlockAllocator implements IBlockAllocator {
   /** Size of memory (in bytes) that will be allocated when calling {@link #allocate()}. */
   protected final long size;
 
-  /** minimum size of memory to reserve for an entire block */
   protected final long blockSize;
+
+  protected long blockAddress;
 
   /** The number of elements of size {@link #size} that can be stored in {@link #blockSize} */
   protected final int capacity;
-
-  /** Address of the reserved block memory */
-  protected long blockAddress = -2;
 
   /** The address that can be used to allocate an element within a block */
   protected volatile long lastAddress = -2;
@@ -85,6 +85,14 @@ public abstract class ABlockAllocator implements IBlockAllocator {
     return this.size;
   }
 
+  public int getCount() {
+    return count;
+  }
+
+  public int getCapacity() {
+    return capacity;
+  }
+
   /**
    * Get the address corresponding to the n-th piece of memory within the block. It is computed
    * using {@link #blockAddress} and {@link #size}.
@@ -108,7 +116,7 @@ public abstract class ABlockAllocator implements IBlockAllocator {
   }
 
   @Override
-  public  MemoryAllocator.ReturnValue allocate() {
+  public MemoryAllocator.ReturnValue allocate() {
 
     long ptr;
     boolean unused = false;
@@ -128,7 +136,7 @@ public abstract class ABlockAllocator implements IBlockAllocator {
          * The last pointer an allocation can reclaim is equal to:
          * ptr = blockAddress + blockSize - size;
          */
-        if ((ptr = lastAddress) >= blockAddress + blockSize) {
+        if ((ptr = lastAddress) >= this.blockAddress + this.blockSize) {
           return null;
         }
 
@@ -141,7 +149,7 @@ public abstract class ABlockAllocator implements IBlockAllocator {
     int newC;
     do {
       newC = this.count;
-      if (newC < 0) return NULL_POINTER; // abort allocation
+      if (newC < 0) return null; // abort allocation
     } while (!casCount(this, newC, newC + 1));
 
     if (unused) {
@@ -152,14 +160,14 @@ public abstract class ABlockAllocator implements IBlockAllocator {
   }
 
   @Override
-  public void free(final long address) {
+  public void free(MemoryAllocator.ReturnValue value) {
     // Decommit before pushing the pointer in the stack to
     // prevent another thread to retrieve the pointer before
     // decommitting and start writing/ using this piece of mem.
-    doFree(address, this.size);
+    doFree(value.getBlockAddress(), this.size);
 
     // Store address for later usage
-    if (this.items.push(getPosition(address))) {
+    if (this.items.push(getPosition(value.getBlockAddress()))) {
       // If the push succeeds, decrements the counter
       // The stack used guarantees that concurrent calls on free()
       // with the same value does not decrement multiple times
@@ -168,6 +176,9 @@ public abstract class ABlockAllocator implements IBlockAllocator {
       int newC;
       do {
         newC = this.count;
+        if (newC < 0) {
+          return;
+        }
       } while (!casCount(this, newC, newC - 1));
 
     } else {
@@ -187,7 +198,6 @@ public abstract class ABlockAllocator implements IBlockAllocator {
       release();
       return true;
     }
-
     return false;
   }
 
@@ -196,37 +206,12 @@ public abstract class ABlockAllocator implements IBlockAllocator {
     doRelease(this.blockAddress, this.blockSize);
   }
 
-  /**
-   * Reserves a range of virtual address space without allocating any actual physical storage in
-   * memory or in the paging file on disk.
-   *
-   * @param size The size of the region to reserve, in bytes.
-   * @return The starting address of the allocated region.
-   */
   protected abstract long virtualAlloc(long size);
 
-  /**
-   * Method called by {@link #allocate()}.
-   *
-   * @param ptr A pointer to the base address of the region of pages to be allocated.
-   * @param size size of the specific region in bytes.
-   */
   protected abstract void doAllocate(long ptr, long size);
 
-  /**
-   * Method called by {@link #free(long)}.
-   *
-   * @param ptr A pointer to the base address of the region of pages to be disposed.
-   * @param size size of the specific region in bytes.
-   */
   protected abstract void doFree(long ptr, long size);
 
-  /**
-   * Method called by {@link #release()}.
-   *
-   * @param ptr pointer to the base address of the region of pages to be released.
-   * @param size size of the region in bytes.
-   */
   protected abstract void doRelease(long ptr, long size);
 
   @Override

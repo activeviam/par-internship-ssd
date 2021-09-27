@@ -5,23 +5,33 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="1be14dd2-f86c-4912-8b38-b7c8578fe744" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/activeviam/chunk/SuperblockDoubleChunk.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/test/java/TestFileIO.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/test/java/com/activeviam/chunk/TestSuperblockDoubleChunk.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/compiler.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/compiler.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/pom.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/com/activeviam/MemoryAllocator.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/activeviam/MemoryAllocator.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/activeviam/chunk/AbstractFileChunk.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/activeviam/chunk/AbstractFileChunk.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/com/activeviam/chunk/AbstractSuperblockChunk.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/activeviam/chunk/AbstractSuperblockChunk.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/com/activeviam/chunk/FileDoubleChunk.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/activeviam/chunk/FileDoubleChunk.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/com/activeviam/chunk/FileIntegerChunk.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/activeviam/chunk/FileIntegerChunk.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/activeviam/platform/CLibrary.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/activeviam/platform/CLibrary.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/activeviam/platform/LinuxPlatform.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/activeviam/platform/LinuxPlatform.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/com/activeviam/reference/ABlockAllocator.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/activeviam/reference/ABlockAllocator.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/activeviam/reference/AMemoryAllocatorOnFile.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/activeviam/reference/AMemoryAllocatorOnFile.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/com/activeviam/reference/BlockAllocatorManager.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/activeviam/reference/BlockAllocatorManager.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/activeviam/reference/BlockAllocatorOnFile.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/activeviam/reference/BlockAllocatorOnFile.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/com/activeviam/reference/IBlockAllocator.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/activeviam/reference/IBlockAllocator.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/activeviam/reference/MemoryAllocatorWithMmap.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/activeviam/reference/MemoryAllocatorWithMmap.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/com/activeviam/reference/Superblock.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/activeviam/reference/Superblock.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/activeviam/reference/SuperblockManager.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/activeviam/reference/SuperblockManager.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/com/activeviam/reference/SuperblockMemoryAllocator.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/activeviam/reference/SuperblockMemoryAllocator.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/test/java/TestMemoryAllocatorOnFile.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/TestMemoryAllocatorOnFile.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/test/java/com/activeviam/chunk/SpecTestDoubleChunk.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/com/activeviam/chunk/SpecTestDoubleChunk.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/test/java/com/activeviam/chunk/SpecTestIntegerChunk.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/com/activeviam/chunk/SpecTestIntegerChunk.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/test/java/com/activeviam/chunk/TestFileDoubleChunk.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/com/activeviam/chunk/TestFileDoubleChunk.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/test/java/com/activeviam/chunk/TestFileIntegerChunk.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/com/activeviam/chunk/TestFileIntegerChunk.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/test/java/com/activeviam/chunk/TestHeapDoubleChunk.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/com/activeviam/chunk/TestHeapDoubleChunk.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ssd.iml" beforeDir="false" afterPath="$PROJECT_DIR$/ssd.iml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -58,12 +68,75 @@
     <property name="last_opened_file_path" value="$PROJECT_DIR$" />
     <property name="ml.local.models.training.notification.expired" value="true" />
   </component>
-  <component name="RunManager">
-    <configuration name="TestMemoryAllocatorOnFile.testAllocatingBlock" type="JUnit" factoryName="JUnit" temporary="true" nameIsGenerated="true">
+  <component name="RunManager" selected="JUnit.TestSuperblockDoubleChunk">
+    <configuration name="TestFileIO.testReadWrite" type="JUnit" factoryName="JUnit" temporary="true" nameIsGenerated="true">
       <module name="ssd" />
       <option name="PACKAGE_NAME" value="" />
-      <option name="MAIN_CLASS_NAME" value="TestMemoryAllocatorOnFile" />
-      <option name="METHOD_NAME" value="testAllocatingBlock(java.nio.file.Path)" />
+      <option name="MAIN_CLASS_NAME" value="TestFileIO" />
+      <option name="METHOD_NAME" value="testReadWrite(java.nio.file.Path)" />
+      <option name="TEST_OBJECT" value="method" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="TestSuperblockDoubleChunk" type="JUnit" factoryName="JUnit" temporary="true" nameIsGenerated="true">
+      <module name="ssd" />
+      <extension name="coverage">
+        <pattern>
+          <option name="PATTERN" value="com.activeviam.chunk.*" />
+          <option name="ENABLED" value="true" />
+        </pattern>
+      </extension>
+      <option name="PACKAGE_NAME" value="com.activeviam.chunk" />
+      <option name="MAIN_CLASS_NAME" value="com.activeviam.chunk.TestSuperblockDoubleChunk" />
+      <option name="TEST_OBJECT" value="class" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="TestSuperblockDoubleChunk.testCreateTwoChunks" type="JUnit" factoryName="JUnit" temporary="true" nameIsGenerated="true">
+      <module name="ssd" />
+      <extension name="coverage">
+        <pattern>
+          <option name="PATTERN" value="com.activeviam.chunk.*" />
+          <option name="ENABLED" value="true" />
+        </pattern>
+      </extension>
+      <option name="PACKAGE_NAME" value="com.activeviam.chunk" />
+      <option name="MAIN_CLASS_NAME" value="com.activeviam.chunk.TestSuperblockDoubleChunk" />
+      <option name="METHOD_NAME" value="testCreateTwoChunks" />
+      <option name="TEST_OBJECT" value="method" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="TestSuperblockDoubleChunk.testNoGC" type="JUnit" factoryName="JUnit" temporary="true" nameIsGenerated="true">
+      <module name="ssd" />
+      <extension name="coverage">
+        <pattern>
+          <option name="PATTERN" value="com.activeviam.chunk.*" />
+          <option name="ENABLED" value="true" />
+        </pattern>
+      </extension>
+      <option name="PACKAGE_NAME" value="com.activeviam.chunk" />
+      <option name="MAIN_CLASS_NAME" value="com.activeviam.chunk.TestSuperblockDoubleChunk" />
+      <option name="METHOD_NAME" value="testNoGC" />
+      <option name="TEST_OBJECT" value="method" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="TestSuperblockDoubleChunk.testReadWrite" type="JUnit" factoryName="JUnit" temporary="true" nameIsGenerated="true">
+      <module name="ssd" />
+      <extension name="coverage">
+        <pattern>
+          <option name="PATTERN" value="com.activeviam.chunk.*" />
+          <option name="ENABLED" value="true" />
+        </pattern>
+      </extension>
+      <option name="PACKAGE_NAME" value="com.activeviam.chunk" />
+      <option name="MAIN_CLASS_NAME" value="com.activeviam.chunk.TestSuperblockDoubleChunk" />
+      <option name="METHOD_NAME" value="testReadWrite" />
       <option name="TEST_OBJECT" value="method" />
       <method v="2">
         <option name="Make" enabled="true" />
@@ -71,7 +144,11 @@
     </configuration>
     <recent_temporary>
       <list>
-        <item itemvalue="JUnit.TestMemoryAllocatorOnFile.testAllocatingBlock" />
+        <item itemvalue="JUnit.TestSuperblockDoubleChunk" />
+        <item itemvalue="JUnit.TestSuperblockDoubleChunk.testNoGC" />
+        <item itemvalue="JUnit.TestSuperblockDoubleChunk" />
+        <item itemvalue="JUnit.TestSuperblockDoubleChunk.testCreateTwoChunks" />
+        <item itemvalue="JUnit.TestSuperblockDoubleChunk.testCreateTwoChunks" />
       </list>
     </recent_temporary>
   </component>
@@ -96,6 +173,63 @@
         </entry>
       </map>
     </option>
-    <option name="oldMeFiltersMigrated" value="true" />
+  </component>
+  <component name="XDebuggerManager">
+    <breakpoint-manager>
+      <breakpoints>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/src/main/java/com/activeviam/platform/LinuxPlatform.java</url>
+          <line>296</line>
+          <option name="timeStamp" value="24" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/src/main/java/com/activeviam/chunk/SuperblockDoubleChunk.java</url>
+          <line>35</line>
+          <option name="timeStamp" value="92" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/src/main/java/com/activeviam/chunk/SuperblockDoubleChunk.java</url>
+          <line>49</line>
+          <option name="timeStamp" value="98" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/src/main/java/com/activeviam/chunk/SuperblockDoubleChunk.java</url>
+          <line>76</line>
+          <option name="timeStamp" value="107" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/src/test/java/com/activeviam/chunk/TestSuperblockDoubleChunk.java</url>
+          <line>15</line>
+          <option name="timeStamp" value="154" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/src/test/java/TestFileIO.java</url>
+          <line>41</line>
+          <option name="timeStamp" value="155" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/src/test/java/TestFileIO.java</url>
+          <line>42</line>
+          <option name="timeStamp" value="156" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/src/test/java/TestFileIO.java</url>
+          <line>37</line>
+          <option name="timeStamp" value="157" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/src/test/java/TestFileIO.java</url>
+          <line>38</line>
+          <option name="timeStamp" value="158" />
+        </line-breakpoint>
+        <breakpoint enabled="true" type="java-exception">
+          <properties class="java.lang.IllegalMonitorStateException" package="java.lang" />
+          <option name="timeStamp" value="108" />
+        </breakpoint>
+      </breakpoints>
+    </breakpoint-manager>
+  </component>
+  <component name="com.intellij.coverage.CoverageDataManagerImpl">
+    <SUITE FILE_PATH="coverage/par_internship_ssd$TestFileIO_testReadWrite.ic" NAME="TestFileIO.testReadWrite Coverage Results" MODIFIED="1632415855864" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="idea" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" />
   </component>
 </project>

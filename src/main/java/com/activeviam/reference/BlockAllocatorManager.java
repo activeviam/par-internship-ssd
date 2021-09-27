@@ -11,6 +11,7 @@ import com.activeviam.MemoryAllocator;
 import com.activeviam.UnsafeUtil;
 import com.activeviam.platform.LinuxPlatform;
 
+import java.util.NoSuchElementException;
 import java.util.concurrent.ConcurrentLinkedDeque;
 
 /**
@@ -106,69 +107,75 @@ public class BlockAllocatorManager implements IBlockAllocator {
   @Override
   public MemoryAllocator.ReturnValue allocate() {
 
-    MemoryAllocator.ReturnValue value;
+    MemoryAllocator.ReturnValue value = null;
 
     do {
 
-      if ((value = this.blocks.peekFirst().allocate()) != null) {
+      final ABlockAllocator blockAllocator = this.blocks.peekFirst();
+
+      if (blockAllocator != null && (value = blockAllocator.allocate()) != null) {
         return value;
       }
 
       if (casOngoingSwapOfFullAllocator(this, 0, 1)) {
         try {
-          ABlockAllocator first = this.blocks.getFirst();
-          if ((value = first.allocate()) != null) {
-            this.blocks.addFirst(first);
-            return value;
-          } else {
 
-            this.blocks.addLast(first);
-            if ((ptr = this.blocks.peekFirst().allocate()) != NULL_POINTER) {
-              return ptr;
-            }
+          ABlockAllocator first;
+          try {
+            first = this.blocks.getFirst();
+          } catch (NoSuchElementException e) {
+            first = null;
+          }
 
-            ABlockAllocator newBlock;
-            if ((newBlock = createBlockAllocator()) == null) {
-              return NULL_POINTER;
-            }
-
-            try {
-              ptr = newBlock.allocate();
-            } finally {
-              this.blocks.addFirst(newBlock);
+          if (first != null) {
+            if ((value = first.allocate()) != null) {
+              this.blocks.addFirst(first);
+              return value;
+            } else {
+              this.blocks.addLast(first);
+              if ((value = this.blocks.peekFirst().allocate()) != null) {
+                return value;
+              }
             }
           }
+
+          ABlockAllocator newBlockAllocator;
+          if ((newBlockAllocator = createBlockAllocator()) == null) {
+            return null;
+          }
+
+          try {
+            value = newBlockAllocator.allocate();
+          } finally {
+            this.blocks.addFirst(newBlockAllocator);
+          }
+
         } finally {
           this.ongoingSwapOfFullAllocator = 0;
         }
       }
 
-    } while (ptr == NULL_POINTER);
+    } while (value == null);
 
-    return ptr;
+    return value;
   }
 
   @Override
-  public void free(final long address) {
-    final var it = this.blocks.iterator();
-    while (it.hasNext()) {
-      final var allocator = it.next();
-      if (allocator.blockAddress <= address && address < allocator.blockAddress + allocator.blockSize) {
-        allocator.free(address);
-        it.remove();
-        if (!allocator.tryRelease()) {
-          this.blocks.addFirst(allocator);
-        }
-        return;
-      }
+  public void free(MemoryAllocator.ReturnValue value) {
+    final var blockAllocator = value.getBlockAllocator();
+    blockAllocator.free(value);
+    if (blockAllocator.tryRelease()) {
+      this.blocks.removeFirstOccurrence(blockAllocator);
     }
   }
 
   @Override
   public void release() {
-    for (final var allocator : this.blocks) {
-      allocator.release();
-      this.blocks.remove(allocator);
+    final var it = this.blocks.iterator();
+    while (it.hasNext()) {
+      final var blockAllocator = it.next();
+      blockAllocator.release();
+      it.remove();
     }
   }
 

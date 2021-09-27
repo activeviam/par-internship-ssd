@@ -7,7 +7,6 @@
 
 package com.activeviam.chunk;
 
-import com.activeviam.reference.MemoryAllocatorOnFile;
 import java.nio.file.Path;
 
 import com.activeviam.reference.MemoryAllocatorWithMmap;
@@ -36,4 +35,7 @@ public class TestFileDoubleChunk implements SpecTestDoubleChunk {
   public DoubleChunk createChunk(int capacity) {
     return new FileDoubleChunk(this.allocator, capacity);
   }
+
+  @Override
+  public void checkGcCounter(long count) {}
 }

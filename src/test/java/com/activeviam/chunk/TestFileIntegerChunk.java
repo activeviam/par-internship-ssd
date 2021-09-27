@@ -7,23 +7,22 @@
 
 package com.activeviam.chunk;
 
-import com.activeviam.reference.MemoryAllocatorOnFile;
 import java.nio.file.Path;
 
-import com.activeviam.reference.SuperblockMemoryAllocator;
+import com.activeviam.reference.MemoryAllocatorWithMmap;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.io.TempDir;
 
 public class TestFileIntegerChunk implements SpecTestIntegerChunk {
 
-  private AMemoryAllocatorOnFile allocator;
+  private MemoryAllocatorWithMmap allocator;
 
   @TempDir static Path tempDir;
 
   @BeforeEach
   void createAllocator() {
-    this.allocator = new SuperblockMemoryAllocator(tempDir);
+    this.allocator = new MemoryAllocatorWithMmap(tempDir);
   }
 
   @AfterEach

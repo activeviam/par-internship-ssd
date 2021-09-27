@@ -9,18 +9,56 @@ package com.activeviam;
 
 import com.activeviam.reference.ABlockAllocator;
 
+import static com.activeviam.reference.IBlockAllocator.NULL_POINTER;
+
 public interface MemoryAllocator {
 
   /** The native page size. */
   long PAGE_SIZE = UnsafeUtil.pageSize();
 
   public class ReturnValue {
-    final ABlockAllocator blockAllocator;
-    final long ptr;
-    ReturnValue(final ABlockAllocator blockAllocator, final long ptr) {
+
+    private final ABlockAllocator blockAllocator;
+    private long blockAddress;
+
+    public ReturnValue(final ABlockAllocator blockAllocator, final long ptr) {
       this.blockAllocator = blockAllocator;
-      this.ptr = ptr;
+      this.blockAddress = ptr;
+      this.activateBlock();
     }
+
+    public ABlockAllocator getBlockAllocator() {
+      return blockAllocator;
+    }
+
+    public long getBlockAddress() {
+      return this.blockAddress & (~0x3);
+    }
+
+    public void activateBlock() {
+      this.blockAddress |= 0x2;
+    }
+
+    public void desactivateBlock() {
+      this.blockAddress &= (~0x2);
+    }
+
+    public boolean isActiveBlock() {
+      return (this.blockAddress & 0x2) != 0;
+    }
+
+    public void spoilBlock() {
+      this.blockAddress |= 0x1;
+    }
+
+    public void cleanBlock() {
+      this.blockAddress &= (~0x1);
+    }
+
+    public boolean isSpoiledBlock() {
+      return (this.blockAddress & 0x1) != 0;
+    }
+
   };
 
   /**

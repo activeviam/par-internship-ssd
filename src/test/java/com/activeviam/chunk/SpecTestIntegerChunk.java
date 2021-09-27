@@ -6,6 +6,7 @@
  */
 package com.activeviam.chunk;
 
+import static com.activeviam.MemoryAllocator.PAGE_SIZE;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.stream.IntStream;
@@ -26,7 +27,7 @@ public interface SpecTestIntegerChunk {
   @Test
   default void testFullWrite() {
     final var values =
-        IntStream.range(0, Math.toIntExact(MemoryAllocator.PAGE_SIZE))
+        IntStream.range(0, Math.toIntExact(PAGE_SIZE))
             .map(i -> 3 * i + 1)
             .toArray();
     final var chunk = createChunk(values.length);

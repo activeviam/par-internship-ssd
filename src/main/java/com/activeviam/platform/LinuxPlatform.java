@@ -226,16 +226,12 @@ public class LinuxPlatform {
     return -1;
   }
 
-  public int openFile(Path path) {
-    return cLib.open(path.toFile().getAbsolutePath(), CLibrary.OPEN_O_RDWR);
-  }
-
   @Deprecated
   public int createTmpFile(Path dir) {
     int fd =
         cLib.open(
             dir.toFile().getAbsolutePath(),
-            CLibrary.OPEN_O_RDWR | CLibrary.OPEN_O_TMPFILE | CLibrary.OPEN_O_CLOEXEC);
+            CLibrary.OPEN_O_RDWR | CLibrary.OPEN_O_TMPFILE | CLibrary.OPEN_O_CLOEXEC, 508);
     switch (fd) {
       case Errno.EOPNOTSUPP:
         {
@@ -249,13 +245,35 @@ public class LinuxPlatform {
   }
 
   public int openFile(String path) {
-    return cLib.open(path, CLibrary.OPEN_O_RDWR);
+    final int fd = cLib.open(path, CLibrary.OPEN_O_RDWR | CLibrary.OPEN_O_SYNC | CLibrary.OPEN_O_CREAT | CLibrary.OPEN_O_TRUNC, 508);
+    if (fd < 0) {
+      Errno.throwLastError("open", path);
+    }
+    return fd;
   }
 
   public void closeFile(int fd) {
     final int result = cLib.close(fd);
     if (result != 0) {
       Errno.throwLastError("close", fd);
+    }
+  }
+
+  public void readFromFile(int fd, long ptr, long count) {
+    if (cLib.lseek(fd, 0, cLib.LSEEK_SET) < 0) {
+      Errno.throwLastError("lseek", fd, 0, cLib.LSEEK_SET);
+    }
+    if (cLib.read(fd, ptr, count) != count) {
+      Errno.throwLastError("read", fd, ptr, count);
+    }
+  }
+
+  public void writeToFile(int fd, long ptr, long count) {
+    if (cLib.lseek(fd, 0, cLib.LSEEK_SET) < 0) {
+      Errno.throwLastError("lseek", fd, 0, cLib.LSEEK_SET);
+    }
+    if (cLib.write(fd, ptr, count) != count) {
+      Errno.throwLastError("write", fd, ptr, count);
     }
   }
 
@@ -341,7 +359,7 @@ public class LinuxPlatform {
     // All Linux distro should support MAP_ANONYMOUS, so no need to create a mapping in /dev/zero.
     final long ptr = cLib.mmap(0, size, prot, flags, -1, 0);
 
-    if (ptr != CLibrary.MAP_FAILED && cLib.mlock(ptr, size) != CLibrary.LOCK_FAILED) {
+    if (ptr != CLibrary.MAP_FAILED) {
       return ptr;
     }
 
@@ -426,4 +444,67 @@ public class LinuxPlatform {
       }
     }
   }
+
+  /** Per-process CPU limit, in seconds.  */
+  public static final int RLIMIT_CPU = 0;
+
+  /** Largest file that can be created, in bytes.  */
+  public static final int  RLIMIT_FSIZE = 1;
+
+  /** Maximum size of data segment, in bytes.  */
+  public static final int  RLIMIT_DATA = 2;
+
+  /** Maximum size of stack segment, in bytes.  */
+  public static final int  RLIMIT_STACK = 3;
+
+  /** Largest core file that can be created, in bytes.  */
+  public static final int  RLIMIT_CORE = 4;
+
+  /**
+   * Largest resident set size, in bytes. This affects swapping; processes
+   * that are exceeding their resident set size will be more likely to have
+   * physical memory taken from them.
+   */
+  public static final int RLIMIT_RSS = 5;
+
+  /** Number of open files.  */
+  public static final int RLIMIT_NOFILE = 7;
+
+  /** Address space limit.  */
+  public static final int RLIMIT_AS = 9;
+
+  /** Number of processes.  */
+  public static final int RLIMIT_NPROC = 6;
+
+  /** Locked-in-memory address space.  */
+  public static final int RLIMIT_MEMLOCK = 8;
+
+  /** Maximum number of file locks.  */
+  public static final int RLIMIT_LOCKS = 10;
+
+  /** Maximum number of pending signals.  */
+  public static final int RLIMIT_SIGPENDING = 11;
+
+  /** Maximum bytes in POSIX message queues.  */
+  public static final int RLIMIT_MSGQUEUE = 12;
+
+  public long getSoftLimit(final int code) {
+    CLibrary.Rlimit limits = new CLibrary.Rlimit();
+    cLib.getrlimit(code, limits);
+    return limits.rlim_cur;
+  }
+
+  public long getHardLimit(final int code) {
+    CLibrary.Rlimit limits = new CLibrary.Rlimit();
+    cLib.getrlimit(code, limits);
+    return limits.rlim_max;
+  }
+
+  public void setSoftLimit(final int code, long value) {
+    assert value <= getHardLimit(code);
+    CLibrary.Rlimit limits = new CLibrary.Rlimit();
+    limits.rlim_cur = value;
+    cLib.setrlimit(RLIMIT_MEMLOCK, limits);
+  }
+
 }

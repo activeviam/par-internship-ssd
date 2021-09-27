@@ -9,14 +9,12 @@ public class MemoryAllocatorWithMmap extends AMemoryAllocatorOnFile {
     }
 
     @Override
-    public long allocateMemory(final long bytes) {
+    public ReturnValue allocateMemory(final long bytes) {
         return getOrCreateAllocator(bytes).allocate();
     }
 
     @Override
-    public void freeMemory(final long address, final long bytes) {
-        getOrCreateAllocator(bytes).free(address);
-    }
+    public void freeMemory(ReturnValue value) { value.getBlockAllocator().free(value); }
 
     @Override
     protected IBlockAllocatorFactory createBlockAllocatorFactory() {

@@ -18,7 +18,7 @@ import com.activeviam.MemoryAllocator;
 public interface IBlockAllocator {
 
   /** Value that indicates an allocation does not succeed. */
-  public static final long NULL_POINTER = -1L;
+  public static final long NULL_POINTER = 0L;
 
   /** @return the size of piece of memory it must allocate via {@link #allocate()}. */
   long size();
@@ -31,11 +31,6 @@ public interface IBlockAllocator {
    */
   MemoryAllocator.ReturnValue allocate();
 
-  /**
-   * Dispose of a piece of memory obtained from {@link #allocate()}
-   *
-   * @param address The address of the memory to free
-   */
   void free(MemoryAllocator.ReturnValue value);
 
   /**

@@ -8,6 +8,7 @@
 package com.activeviam.platform;
 
 import com.sun.jna.Library;
+import com.sun.jna.Structure;
 
 /**
  * C Library constants, retrieved from mman.h files for libc.so.6
@@ -271,6 +272,8 @@ interface CLibrary extends Library {
   // int mlock(void *addr, size_t length);
   int mlock(long addr, long length);
 
+
+
   /**
    * The madvise() system call advises the kernel about how to handle paging input/output in the
    * address range beginning at address addr and with size length bytes. It allows an application to
@@ -363,24 +366,19 @@ interface CLibrary extends Library {
   int getpagesizes(long pagesize[], int nelem);
 
   // From https://github.com/torvalds/linux/blob/master/include/uapi/asm-generic/fcntl.h
-  static final int OPEN_O_RDONLY = 0x00000000;
-  static final int OPEN_O_WRONLY = 0x00000001;
-  static final int OPEN_O_RDWR = 0x00000002;
-  static final int OPEN_O_CLOEXEC = 0x02000000; /* set close_on_exec */
+  static final int OPEN_O_RDONLY    = 0x00000000;
+  static final int OPEN_O_WRONLY    = 0x00000001;
+  static final int OPEN_O_RDWR      = 0x00000002;
+  static final int OPEN_O_CREAT     = 0x00000040;
+  static final int OPEN_O_TRUNC     = 0x00000200;
+  static final int OPEN_O_SYNC      = 0x00101000;
+  static final int OPEN_O_CLOEXEC   = 0x02000000; /* set close_on_exec */
   static final int OPEN_O_LARGEFILE = 0x00100000;
-  static final int OPEN_O_TMPFILE = 0x020000000;
+  static final int OPEN_O_TMPFILE   = 0x20000000;
 
-  /**
-   * Given a {@code pathName} for a file, this method returns a file descriptor, a small,
-   * nonnegative integer for use in subsequent system calls.
-   *
-   * @param pathName path of the file to open
-   * @param flags file creation flags and file status flags can be bitwise-or'd
-   * @return the new file descriptor, or -1 if an error occurred
-   */
   // http://man7.org/linux/man-pages/man2/open.2.html
-  // int open(const char *pathname, int flags);
-  int open(String pathName, int flags);
+  // int open(const char *pathname, int flags, int whence);
+  int open(String pathName, int flags, int whence);
 
   /**
    * Closes a file descriptor, so that it no longer refers to any file and may be reused.
@@ -391,10 +389,35 @@ interface CLibrary extends Library {
   // http://man7.org/linux/man-pages/man2/close.2.html
   int close(int fd);
 
+  // ssize_t read(int fd, void *buf, size_t count);
+  long read(int fd, long ptr, long count);
+
+  // ssize_t write(int fd, const void *buf, size_t count);
+  long write(int fd, long ptr, long count);
+
   static final int FALLOCATE_FALLOC_FL_KEEP_SIZE = 0x01; /* default is extend size */
   static final int FALLOCATE_FALLOC_FL_PUNCH_HOLE = 0x02; /* de-allocates range */
 
   // http://man7.org/linux/man-pages/man2/fallocate.2.html
   // int fallocate(int fd, int mode, off_t offset, off_t len);
   int fallocate(int fd, int mode, long offset, long len);
+
+  public static final int LSEEK_SET = 0;
+
+  // off_t lseek(int fd, off_t offset, int whence);
+  long lseek(int fd, long offset, int whence);
+
+  @Structure.FieldOrder({"rlim_cur", "rlim_max"})
+  public static class Rlimit extends Structure {
+    /** The current (soft) limit.  */
+    public long rlim_cur;
+
+    /** The hard limit.  */
+    public long rlim_max;
+  }
+
+  // see man(2) rlimit
+  int getrlimit(int resource, Rlimit rlim);
+  int setrlimit(int resource, Rlimit rlim);
+
 }

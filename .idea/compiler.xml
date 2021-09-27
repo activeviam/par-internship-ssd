@@ -10,7 +10,7 @@
       </profile>
     </annotationProcessing>
     <bytecodeTargetLevel>
-      <module name="ssd" target="15" />
+      <module name="ssd" target="11" />
     </bytecodeTargetLevel>
   </component>
 </project>
