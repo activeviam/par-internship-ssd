@@ -222,6 +222,10 @@ public class ConcurrentUniqueIntegerStack {
     return size;
   }
 
+  public boolean contains(int value) {
+    return table[value] != free;
+  }
+
   @Override
   public String toString() {
     int uh = untagHead(head);

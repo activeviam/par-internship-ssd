@@ -6,9 +6,6 @@ import java.nio.file.Path;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
-import java.util.function.LongSupplier;
-
-import static com.activeviam.reference.IBlockAllocator.NULL_POINTER;
 
 public class SuperblockMemoryAllocator extends AMemoryAllocatorOnFile {
 
@@ -26,10 +23,6 @@ public class SuperblockMemoryAllocator extends AMemoryAllocatorOnFile {
         this.gcCounter = new AtomicLong(0);
     }
 
-    public ReadWriteLock getGcRwlock() {
-        return gcRwlock;
-    }
-
     @Override
     public MemoryAllocator.ReturnValue allocateMemory(long bytes) {
         MemoryAllocator.ReturnValue value = tryAllocateMemory(bytes);
@@ -41,9 +34,10 @@ public class SuperblockMemoryAllocator extends AMemoryAllocatorOnFile {
     }
 
     private ReturnValue tryAllocateMemory(long bytes) {
+        this.gcRwlock.readLock().lock();
         try {
-            this.gcRwlock.readLock().lock();
-            return getOrCreateAllocator(bytes).allocate();
+            final var value = getOrCreateAllocator(bytes).allocate();
+            return value;
         } finally {
             this.gcRwlock.readLock().unlock();
         }
@@ -73,24 +67,37 @@ public class SuperblockMemoryAllocator extends AMemoryAllocatorOnFile {
     }
 
     private void garbageCollect() {
-        try {
-            gcRwlock.writeLock().lock();
-            var it = this.allocators.entrySet().iterator();
-            while (it.hasNext() && this.storage.count > GARBAGE_COLLECT_RATE * this.storage.capacity) {
-                it.next().getValue().release();
+        if (this.gcRwlock.writeLock().tryLock()) {
+            try {
+                var it = this.allocators.entrySet().iterator();
+                while (it.hasNext() && this.storage.count > GARBAGE_COLLECT_RATE * this.storage.capacity) {
+                    ((BlockAllocatorManager)(it.next().getValue())).garbageCollect();
+                }
+            } finally {
+                this.gcCounter.incrementAndGet();
+                this.gcRwlock.writeLock().unlock();
             }
-            this.gcCounter.incrementAndGet();
-        } finally {
-            gcRwlock.writeLock().unlock();
         }
     }
 
-    public long getGCCounter() {
+    public long getGcCounter() {
         return this.gcCounter.get();
     }
 
     @Override
     public void close() {
         this.storage.release();
+    }
+
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+
+        sb.append("Storage:\n").append(storage).append("\n\nAllocators:\n");
+
+        for (final var allocator : this.allocators.entrySet()) {
+            sb.append(allocator.getValue()).append("\n-----\n");
+        }
+        return sb.toString();
     }
 }

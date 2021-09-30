@@ -6,19 +6,10 @@ import com.activeviam.platform.LinuxPlatform;
 import com.activeviam.reference.*;
 
 import java.io.Closeable;
-import java.io.File;
-import java.io.IOException;
-import java.io.RandomAccessFile;
-import java.nio.channels.FileChannel;
-import java.nio.file.Path;
-import java.nio.file.StandardOpenOption;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.LongSupplier;
-
-import static com.activeviam.reference.IBlockAllocator.NULL_POINTER;
 
 public abstract class AbstractSuperblockChunk<K> implements Chunk<K>, Closeable {
 
@@ -28,7 +19,7 @@ public abstract class AbstractSuperblockChunk<K> implements Chunk<K>, Closeable 
     /** Unsafe provider. */
     protected static final sun.misc.Unsafe UNSAFE = UnsafeUtil.getUnsafe();
 
-    public class Header {
+    public static class Header {
 
         private final MemoryAllocator.ReturnValue allocatorValue;
         private final int fd;
@@ -44,7 +35,7 @@ public abstract class AbstractSuperblockChunk<K> implements Chunk<K>, Closeable 
         public int getFd() {
             return this.fd;
         }
-    };
+    }
 
     protected final SuperblockMemoryAllocator allocator;
     protected final int capacity;
@@ -78,61 +69,39 @@ public abstract class AbstractSuperblockChunk<K> implements Chunk<K>, Closeable 
         if (this.header.allocatorValue != null) {
             this.header.allocatorValue.getBlockAllocator().free(this.header.allocatorValue);
             this.header.allocatorValue.desactivateBlock();
+            PLATFORM.closeFile(this.header.fd);
         } else {
             throw new IllegalStateException("Cannot free twice the same block");
         }
     }
 
     protected void relocateMemoryBlock() {
+
         if (!this.chunkLock.tryLock()) {
-            waitRelocation();
+            this.chunkLock.lock();
+            this.chunkLock.unlock();
             return;
         }
 
-        Header newHeader = null;
+        Header newHeader;
         try {
             newHeader = assignNewMemoryBlock(this.header.getFd());
-
-            final var superblock = (Superblock) this.header.allocatorValue.getBlockAllocator();
-            waitGarbageCollect(superblock);
-
-            final long oldAddress = this.header.getAllocatorValue().getBlockAddress();
-            final long newAddress = newHeader.getAllocatorValue().getBlockAddress();
-
-            if (superblock.isActive()) {
-                UNSAFE.copyMemory(oldAddress, newAddress, this.blockSize);
-            } else {
+            if (newHeader.getAllocatorValue().isActiveBlock()) {
+                final long newAddress = newHeader.getAllocatorValue().getBlockAddress();
                 PLATFORM.readFromFile(this.header.getFd(), newAddress, this.blockSize);
+                this.header = newHeader;
             }
-            this.header = newHeader;
         } finally {
             this.chunkLock.unlock();
         }
     }
 
-    private void waitRelocation() {
-        this.chunkLock.lock();
-        this.chunkLock.unlock();
-    }
-
-    private void waitGarbageCollect(Superblock superblock) {
-        superblock.getRwlock().readLock().lock();
-        superblock.getRwlock().readLock().unlock();
-    }
-
     private Header assignNewMemoryBlock(int fd) {
         final var av = this.allocator.allocateMemory(this.blockSize);
 
-        final Header header;
+        final Header header = new Header(av, fd);
         final Superblock superblock = (Superblock)av.getBlockAllocator();
-
-        if (superblock.isActive()) {
-            header = new Header(av, fd);
-            superblock.registerOwner(header);
-        } else {
-            header = null;
-        }
-
+        superblock.registerOwner(header);
         return header;
     }
 }

@@ -47,7 +47,7 @@ public interface MemoryAllocator {
       return (this.blockAddress & 0x2) != 0;
     }
 
-    public void spoilBlock() {
+    public void dirtyBlock() {
       this.blockAddress |= 0x1;
     }
 
@@ -55,7 +55,7 @@ public interface MemoryAllocator {
       this.blockAddress &= (~0x1);
     }
 
-    public boolean isSpoiledBlock() {
+    public boolean isDirtyBlock() {
       return (this.blockAddress & 0x1) != 0;
     }
 

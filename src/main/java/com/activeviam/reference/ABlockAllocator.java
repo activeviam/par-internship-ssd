@@ -11,6 +11,7 @@ import com.activeviam.MemoryAllocator;
 import com.activeviam.UnsafeUtil;
 
 import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -36,6 +37,10 @@ public abstract class ABlockAllocator implements IBlockAllocator {
 
   /** The address that can be used to allocate an element within a block */
   protected volatile long lastAddress = -2;
+
+  protected final ReadWriteLock rwlock;
+
+  protected long timestamp;
 
   /**
    * A stack of available items that can be use to write/read a piece of memory within the allocated
@@ -67,11 +72,13 @@ public abstract class ABlockAllocator implements IBlockAllocator {
     this.capacity = (int) (blockSize / size);
     this.items = new ConcurrentUniqueIntegerStack(this.capacity);
     this.count = 0;
+    this.rwlock = new ReentrantReadWriteLock();
   }
 
   /** Must be called once before using {@link #allocate()}. */
   public boolean init() {
     final long blockPtr = virtualAlloc(this.blockSize);
+    this.timestamp = System.currentTimeMillis();
     if (blockPtr == NULL_POINTER) {
       return false;
     }
@@ -85,12 +92,12 @@ public abstract class ABlockAllocator implements IBlockAllocator {
     return this.size;
   }
 
-  public int getCount() {
-    return count;
-  }
+  public int count() { return this.count; }
 
-  public int getCapacity() {
-    return capacity;
+  public int capacity() { return this.capacity; }
+
+  public ReadWriteLock rwlock() {
+    return this.rwlock;
   }
 
   /**
@@ -115,9 +122,12 @@ public abstract class ABlockAllocator implements IBlockAllocator {
     return (int) ((address - this.blockAddress) / this.size);
   }
 
+  public boolean contains(long ptr) {
+    return this.items.contains(getPosition(ptr));
+  }
+
   @Override
   public MemoryAllocator.ReturnValue allocate() {
-
     long ptr;
     boolean unused = false;
 
@@ -136,7 +146,7 @@ public abstract class ABlockAllocator implements IBlockAllocator {
          * The last pointer an allocation can reclaim is equal to:
          * ptr = blockAddress + blockSize - size;
          */
-        if ((ptr = lastAddress) >= this.blockAddress + this.blockSize) {
+        if ((ptr = lastAddress) > this.blockAddress + this.blockSize - this.size) {
           return null;
         }
 
@@ -156,6 +166,7 @@ public abstract class ABlockAllocator implements IBlockAllocator {
       doAllocate(ptr, size);
     }
 
+    this.updateTimestamp();
     return new MemoryAllocator.ReturnValue(this, ptr);
   }
 
@@ -164,28 +175,42 @@ public abstract class ABlockAllocator implements IBlockAllocator {
     // Decommit before pushing the pointer in the stack to
     // prevent another thread to retrieve the pointer before
     // decommitting and start writing/ using this piece of mem.
+
     doFree(value.getBlockAddress(), this.size);
 
+    final int pos = getPosition(value.getBlockAddress());
+
     // Store address for later usage
-    if (this.items.push(getPosition(value.getBlockAddress()))) {
+    if (this.items.push(pos)) {
       // If the push succeeds, decrements the counter
       // The stack used guarantees that concurrent calls on free()
       // with the same value does not decrement multiple times
       // the counter. Further more, when the counter value reaches 0,
       // the entire block can be released.
+
+      this.updateTimestamp();
+
       int newC;
       do {
         newC = this.count;
-        if (newC < 0) {
+        if (newC <= 0) {
           return;
         }
       } while (!casCount(this, newC, newC - 1));
 
     } else {
-      // Not suppose to happen...
+      // Not supposed to happen...
+
+      /*
+       * pause everything
+       * acquire all locks
+       * print chunks in all blocks
+       * throw and exit
+       */
+
       LOGGER.log(
-          Level.WARNING,
-          "Cleaning address twice for chunk of size " + PrintUtil.printDataSize(this.size) + ".");
+              Level.WARNING,
+              "Cleaning address twice for chunk of size " + PrintUtil.printDataSize(this.size) + ".");
     }
   }
 
@@ -195,15 +220,15 @@ public abstract class ABlockAllocator implements IBlockAllocator {
    */
   public boolean tryRelease() {
     if (casCount(this, 0, -1)) { // set to -1 to turn it off to protect further allocation
-      release();
+      doRelease(this.blockAddress, this.blockSize);
       return true;
     }
     return false;
   }
 
-  @Override
   public void release() {
     doRelease(this.blockAddress, this.blockSize);
+    this.count = -1;
   }
 
   protected abstract long virtualAlloc(long size);
@@ -267,5 +292,13 @@ public abstract class ABlockAllocator implements IBlockAllocator {
   protected static final boolean casLastAddress(
       final ABlockAllocator blockAllocator, final long expected, final long updated) {
     return UnsafeUtil.compareAndSwapLong(blockAllocator, lastAddressOffset, expected, updated);
+  }
+
+  public long getTimestamp() {
+    return this.timestamp;
+  }
+
+  public void updateTimestamp() {
+    this.timestamp = System.currentTimeMillis();
   }
 }

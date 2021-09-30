@@ -38,4 +38,7 @@ public class TestFileDoubleChunk implements SpecTestDoubleChunk {
 
   @Override
   public void checkGcCounter(long count) {}
+
+  @Override
+  public void dumpAllocatorState() {}
 }

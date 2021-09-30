@@ -11,11 +11,12 @@ import com.activeviam.MemoryAllocator;
 import com.activeviam.UnsafeUtil;
 import com.activeviam.platform.LinuxPlatform;
 
+import java.util.Deque;
 import java.util.NoSuchElementException;
 import java.util.concurrent.ConcurrentLinkedDeque;
 
 /**
- * Does implement {@link IBlockAllocator} but it delegate all its call to a {@link IBlockAllocator}
+ * Does implement {@link IBlockAllocator} but it delegates all its call to a {@link IBlockAllocator}
  * within a list of {@link IBlockAllocator} it manages.
  *
  * @author ActiveViam
@@ -23,7 +24,7 @@ import java.util.concurrent.ConcurrentLinkedDeque;
 public class BlockAllocatorManager implements IBlockAllocator {
 
   /** List of all underlying managed allocators */
-  private final ConcurrentLinkedDeque<ABlockAllocator> blocks;
+  private final Deque<ABlockAllocator> blocks;
 
   /** Size of memory (in bytes) that will be allocated when calling {@link #allocate()}. */
   private final long size;
@@ -32,6 +33,8 @@ public class BlockAllocatorManager implements IBlockAllocator {
   private final long virtualBlockSize;
 
   private volatile int ongoingSwapOfFullAllocator;
+
+  private final long MIN_BALLOC_LIFE_DURATION = 0;
 
   /**
    * boolean to indicate huge pages (if supported) can be requested when allocating block of memory
@@ -62,7 +65,7 @@ public class BlockAllocatorManager implements IBlockAllocator {
   }
 
   /**
-   * Check whether or not huge pages can be asked to the system.
+   * Check whether the huge pages may be asked form the system.
    *
    * @return true if huge pages can be asked, false otherwise.
    */
@@ -108,53 +111,42 @@ public class BlockAllocatorManager implements IBlockAllocator {
   public MemoryAllocator.ReturnValue allocate() {
 
     MemoryAllocator.ReturnValue value = null;
+    ABlockAllocator blockAllocator;
 
     do {
 
-      final ABlockAllocator blockAllocator = this.blocks.peekFirst();
-
-      if (blockAllocator != null && (value = blockAllocator.allocate()) != null) {
+      if ((blockAllocator = this.blocks.peekFirst()) != null && (value = blockAllocator.allocate()) != null) {
         return value;
       }
 
       if (casOngoingSwapOfFullAllocator(this, 0, 1)) {
         try {
 
-          ABlockAllocator first;
           try {
-            first = this.blocks.getFirst();
-          } catch (NoSuchElementException e) {
-            first = null;
-          }
-
-          if (first != null) {
-            if ((value = first.allocate()) != null) {
-              this.blocks.addFirst(first);
+            blockAllocator = this.blocks.getFirst();
+            if ((value = blockAllocator.allocate()) != null) {
+              this.blocks.addFirst(blockAllocator);
               return value;
-            } else {
-              this.blocks.addLast(first);
-              if ((value = this.blocks.peekFirst().allocate()) != null) {
-                return value;
-              }
             }
+            this.blocks.addLast(blockAllocator);
+          } catch (NoSuchElementException e) {
           }
 
-          ABlockAllocator newBlockAllocator;
-          if ((newBlockAllocator = createBlockAllocator()) == null) {
+          if ((blockAllocator = this.blocks.peekFirst()) != null && (value = blockAllocator.allocate()) != null) {
+            return value;
+          }
+
+          if ((blockAllocator = createBlockAllocator()) == null) {
             return null;
           }
 
-          try {
-            value = newBlockAllocator.allocate();
-          } finally {
-            this.blocks.addFirst(newBlockAllocator);
-          }
+          value = blockAllocator.allocate();
+          this.blocks.addFirst(blockAllocator);
 
         } finally {
           this.ongoingSwapOfFullAllocator = 0;
         }
       }
-
     } while (value == null);
 
     return value;
@@ -174,30 +166,53 @@ public class BlockAllocatorManager implements IBlockAllocator {
     final var it = this.blocks.iterator();
     while (it.hasNext()) {
       final var blockAllocator = it.next();
-      blockAllocator.release();
+      if (!blockAllocator.tryRelease()){
+        blockAllocator.release();
+      }
       it.remove();
     }
   }
 
   @Override
   public String toString() {
-    return BlockAllocatorManager.class.getSimpleName()
+
+    StringBuilder sb = new StringBuilder(BlockAllocatorManager.class.getSimpleName()
         + " [size="
         + this.size
         + ", blockSize="
         + this.virtualBlockSize
         + ", useHugePage="
         + this.useHugePage
-        + "]";
+        + "]");
+
+    for (final var ba : this.blocks) {
+      sb.append(ba.toString());
+    }
+
+    return sb.toString();
   }
 
   private static final long ongoingSwapOfFullAllocatorOffset =
           UnsafeUtil.getFieldOffset(BlockAllocatorManager.class, "ongoingSwapOfFullAllocator");
 
-  private static final boolean casOngoingSwapOfFullAllocator(
+  private static boolean casOngoingSwapOfFullAllocator(
           final BlockAllocatorManager blockAllocatorManager, final int expect, final int update) {
     return UnsafeUtil.compareAndSwapInt(
             blockAllocatorManager, ongoingSwapOfFullAllocatorOffset, expect, update);
+  }
+
+  public void garbageCollect() {
+    final var it = this.blocks.iterator();
+    while (it.hasNext()) {
+      final var blockAllocator = it.next();
+      final long currentTime = System.currentTimeMillis();
+      if (blockAllocator.getTimestamp() + MIN_BALLOC_LIFE_DURATION < currentTime) {
+        if (!blockAllocator.tryRelease()) {
+          blockAllocator.release();
+        }
+        it.remove();
+      }
+    }
   }
 
 }

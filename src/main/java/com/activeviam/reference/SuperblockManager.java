@@ -57,7 +57,7 @@ public class SuperblockManager extends ABlockAllocator {
     protected void doAllocate(long ptr, long size) { PLATFORM.commit(ptr, size, this.useHugePage); }
 
     @Override
-    protected void doFree(long ptr, long size) { /* do nothing */ }
+    protected void doFree(long ptr, long size) { }
 
     @Override
     protected void doRelease(long ptr, long size) { PLATFORM.munmap(ptr, size); }

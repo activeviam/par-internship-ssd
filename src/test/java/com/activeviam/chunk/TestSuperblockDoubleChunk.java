@@ -4,6 +4,7 @@ import com.activeviam.platform.LinuxPlatform;
 import com.activeviam.reference.SuperblockMemoryAllocator;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import sun.misc.Unsafe;
 
@@ -17,13 +18,19 @@ public class TestSuperblockDoubleChunk implements SpecTestDoubleChunk {
 
     private SuperblockMemoryAllocator allocator;
 
+    @Test
+    void testFree() {
+
+
+    }
+
     @TempDir
     static Path tempDir;
 
     @BeforeEach
     void createAllocator() {
         final long hugePageSize = 1 << 21;
-        this.allocator = new SuperblockMemoryAllocator(tempDir, hugePageSize, hugePageSize, false);
+        this.allocator = new SuperblockMemoryAllocator(tempDir, hugePageSize, 8 * hugePageSize, false);
     }
 
     @AfterEach
@@ -40,6 +47,17 @@ public class TestSuperblockDoubleChunk implements SpecTestDoubleChunk {
     @Override
     public void checkGcCounter(long count) {
         System.out.println("Checking GC counter");
-        assertThat(this.allocator.getGCCounter()).isEqualTo(count);
+        if (count < 0) {
+            System.out.println("GC counter = " + this.allocator.getGcCounter());
+        } else {
+            assertThat(this.allocator.getGcCounter()).isEqualTo(count);
+        }
+    }
+
+    @Override
+    public void dumpAllocatorState() {
+        synchronized (this.allocator) {
+            System.out.println(this.allocator);
+        }
     }
 }

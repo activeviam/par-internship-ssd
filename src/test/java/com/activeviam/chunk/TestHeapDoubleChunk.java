@@ -15,5 +15,8 @@ public class TestHeapDoubleChunk implements SpecTestDoubleChunk {
   }
 
   @Override
+  public void dumpAllocatorState() {}
+
+  @Override
   public void checkGcCounter(long count) {}
 }

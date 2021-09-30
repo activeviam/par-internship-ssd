@@ -19,7 +19,7 @@ public class SuperblockDoubleChunk extends AbstractSuperblockChunk<Double> imple
     }
 
     private static long computeBlockSize(final int capacity) {
-        final var minSize = capacity << ELEMENT_SIZE_ORDER;
+        final long minSize = capacity << ELEMENT_SIZE_ORDER;
         if (minSize % PAGE_SIZE == 0) {
             return minSize;
         } else {
@@ -33,17 +33,20 @@ public class SuperblockDoubleChunk extends AbstractSuperblockChunk<Double> imple
     @Override
     public double readDouble(int position) {
         assert 0 <= position && position < capacity();
+
         for (;;) {
+            final var allocatorValue = this.header.getAllocatorValue();
+            final var blockAllocator = allocatorValue.getBlockAllocator();
+            final var rwlock = blockAllocator.rwlock();
 
-            Superblock superblock = (Superblock) this.header.getAllocatorValue().getBlockAllocator();
-
-            if (superblock.getRwlock().readLock().tryLock()) {
+            if (rwlock.readLock().tryLock()) {
                 try {
-                    if (this.header.getAllocatorValue().isActiveBlock()) {
+                    if (allocatorValue.isActiveBlock()) {
+                        blockAllocator.updateTimestamp();
                         return UNSAFE.getDouble(offset(position << ELEMENT_SIZE_ORDER));
                     }
                 } finally {
-                  superblock.getRwlock().readLock().unlock();
+                  rwlock.readLock().unlock();
                 }
             }
 
@@ -56,17 +59,20 @@ public class SuperblockDoubleChunk extends AbstractSuperblockChunk<Double> imple
         assert 0 <= position && position < capacity();
         for (;;) {
 
-            Superblock superblock = (Superblock) this.header.getAllocatorValue().getBlockAllocator();
+            final var allocatorValue = this.header.getAllocatorValue();
+            final var blockAllocator = allocatorValue.getBlockAllocator();
+            final var rwlock = blockAllocator.rwlock();
 
-            if (superblock.getRwlock().readLock().tryLock()) {
+            if (rwlock.readLock().tryLock()) {
                 try {
-                    if (this.header.getAllocatorValue().isActiveBlock()) {
-                        this.header.getAllocatorValue().spoilBlock();
+                    if (allocatorValue.isActiveBlock()) {
+                        blockAllocator.updateTimestamp();
+                        allocatorValue.dirtyBlock();
                         UNSAFE.putDouble(offset(position << ELEMENT_SIZE_ORDER), value);
                         return;
                     }
                 } finally {
-                    superblock.getRwlock().readLock().unlock();
+                    rwlock.readLock().unlock();
                 }
             }
 
