@@ -13,10 +13,4 @@ public class TestHeapDoubleChunk implements SpecTestDoubleChunk {
   public DoubleChunk createChunk(int capacity) {
     return new HeapDoubleChunk(capacity);
   }
-
-  @Override
-  public void dumpAllocatorState() {}
-
-  @Override
-  public void checkGcCounter(long count) {}
 }

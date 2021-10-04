@@ -9,20 +9,20 @@ package com.activeviam.chunk;
 
 import java.nio.file.Path;
 
-import com.activeviam.reference.MemoryAllocatorWithMmap;
+import com.activeviam.reference.MmapMemoryAllocator;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.io.TempDir;
 
 public class TestFileDoubleChunk implements SpecTestDoubleChunk {
 
-  private MemoryAllocatorWithMmap allocator;
+  private MmapMemoryAllocator allocator;
 
   @TempDir static Path tempDir;
 
   @BeforeEach
   void createAllocator() {
-    this.allocator = new MemoryAllocatorWithMmap(tempDir);
+    this.allocator = new MmapMemoryAllocator(tempDir);
   }
 
   @AfterEach
@@ -33,12 +33,6 @@ public class TestFileDoubleChunk implements SpecTestDoubleChunk {
 
   @Override
   public DoubleChunk createChunk(int capacity) {
-    return new FileDoubleChunk(this.allocator, capacity);
+    return new MmapDoubleChunk(this.allocator, capacity);
   }
-
-  @Override
-  public void checkGcCounter(long count) {}
-
-  @Override
-  public void dumpAllocatorState() {}
 }

@@ -8,18 +8,18 @@
 package com.activeviam.chunk;
 
 import com.activeviam.UnsafeUtil;
-import com.activeviam.reference.MemoryAllocatorWithMmap;
+import com.activeviam.reference.MmapMemoryAllocator;
 
 import java.util.logging.Logger;
 
-import static com.activeviam.MemoryAllocator.PAGE_SIZE;
+import static com.activeviam.IMemoryAllocator.PAGE_SIZE;
 
-public class FileDoubleChunk extends AbstractFileChunk<Double> implements DoubleChunk {
+public class MmapDoubleChunk extends AMmapChunk<Double> implements DoubleChunk {
 
   /** The order of the size in bytes of an element. */
   private static final int ELEMENT_SIZE_ORDER = 3;
 
-  public FileDoubleChunk(final MemoryAllocatorWithMmap allocator, final int capacity) {
+  public MmapDoubleChunk(final MmapMemoryAllocator allocator, final int capacity) {
     super(allocator, capacity, computeBlockSize(capacity));
   }
 

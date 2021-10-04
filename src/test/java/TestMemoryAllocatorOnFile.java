@@ -14,14 +14,14 @@ import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-import com.activeviam.MemoryAllocator;
+import com.activeviam.IMemoryAllocator;
 import com.activeviam.UnsafeUtil;
-import com.activeviam.reference.SuperblockManager;
-import com.activeviam.reference.SuperblockMemoryAllocator;
+import com.activeviam.reference.VirtMemStorage;
+import com.activeviam.reference.SwapMemoryAllocator;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
-import static com.activeviam.MemoryAllocator.PAGE_SIZE;
+import static com.activeviam.IMemoryAllocator.PAGE_SIZE;
 import static com.activeviam.reference.IBlockAllocator.NULL_POINTER;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -30,7 +30,7 @@ public class TestMemoryAllocatorOnFile {
   @Test
   void testAllocatingBlock(@TempDir Path tempDir) {
     System.out.println("Running test with temp dir " + tempDir);
-    final var allocator = new SuperblockMemoryAllocator(tempDir, 1 << 21, 1 << 30, false);
+    final var allocator = new SwapMemoryAllocator(tempDir, 1 << 21, 1 << 30, false);
     final var size1 = 2 * PAGE_SIZE;
     final var alloc1 = allocator.allocateMemory(size1);
     final var size2 = PAGE_SIZE;
@@ -39,8 +39,8 @@ public class TestMemoryAllocatorOnFile {
     allocator.freeMemory(alloc2);
   }
 
-  private final SuperblockManager vmem = new SuperblockManager(1 << 21, 1 << 21, false);
-  private final ConcurrentLinkedDeque<MemoryAllocator.ReturnValue> deque = new ConcurrentLinkedDeque();
+  private final VirtMemStorage vmem = new VirtMemStorage(1 << 21, 1 << 21, false);
+  private final ConcurrentLinkedDeque<IMemoryAllocator.ReturnValue> deque = new ConcurrentLinkedDeque();
   private final ReadWriteLock rwlock = new ReentrantReadWriteLock();
 
   @Test
@@ -57,14 +57,14 @@ public class TestMemoryAllocatorOnFile {
 
       final Thread thread = new Thread(() -> {
 
-        MemoryAllocator.ReturnValue value = null;
+        IMemoryAllocator.ReturnValue value = null;
 
         for (int i = 0; i < 1; i++) {
 
           boolean stop = false;
           while (!stop) {
             if (rwlock.readLock().tryLock()) {
-              if (value != null && value.isActiveBlock()) {
+              if (value != null) {
                 UnsafeUtil.putInt(value.getBlockAddress() + 4 * i, id);
                 rwlock.readLock().unlock();
                 stop = true;
@@ -82,7 +82,7 @@ public class TestMemoryAllocatorOnFile {
           boolean stop = false;
           while (!stop) {
             if (rwlock.readLock().tryLock()) {
-              if (value != null && value.isActiveBlock()) {
+              if (value != null) {
                 actual = UnsafeUtil.getInt(value.getBlockAddress() + 4 * i);
                 rwlock.readLock().unlock();
                 stop = true;
@@ -114,9 +114,9 @@ public class TestMemoryAllocatorOnFile {
 
   private final ReadWriteLock gcRwlock = new ReentrantReadWriteLock();
 
-  private MemoryAllocator.ReturnValue getPtr() {
+  private IMemoryAllocator.ReturnValue getPtr() {
 
-    MemoryAllocator.ReturnValue value = null;
+    IMemoryAllocator.ReturnValue value = null;
 
     do {
       gcRwlock.readLock().lock();
@@ -138,7 +138,6 @@ public class TestMemoryAllocatorOnFile {
         this.rwlock.writeLock().lock();
         final var value = it.next();
         vmem.free(value);
-        value.desactivateBlock();
         this.rwlock.writeLock().unlock();
         it.remove();
       }

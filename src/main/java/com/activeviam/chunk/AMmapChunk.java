@@ -7,19 +7,20 @@
 
 package com.activeviam.chunk;
 
-import com.activeviam.MemoryAllocator;
-import com.activeviam.reference.MemoryAllocatorWithMmap;
+import com.activeviam.IMemoryAllocator;
+import com.activeviam.reference.ABlockStackAllocator;
+import com.activeviam.reference.MmapMemoryAllocator;
 
 import java.io.Closeable;
 
-public abstract class AbstractFileChunk<K> implements Chunk<K>, Closeable {
+public abstract class AMmapChunk<K> implements Chunk<K>, Closeable {
 
 	private final int capacity;
 	private final long blockSize;
-	private MemoryAllocator.ReturnValue allocatorValue;
+	private IMemoryAllocator.ReturnValue allocatorValue;
 
-	public AbstractFileChunk(
-			final MemoryAllocatorWithMmap allocator, final int capacity, final long blockSize) {
+	public AMmapChunk(
+			final MmapMemoryAllocator allocator, final int capacity, final long blockSize) {
 		this.capacity = capacity;
 		this.blockSize = blockSize;
 		this.allocatorValue = allocator.allocateMemory(this.blockSize);
@@ -37,7 +38,7 @@ public abstract class AbstractFileChunk<K> implements Chunk<K>, Closeable {
 	@Override
 	public void close() {
 		if (this.allocatorValue.getBlockAddress() >= 0) {
-			this.allocatorValue.getBlockAllocator().free(this.allocatorValue);
+			((ABlockStackAllocator)this.allocatorValue.getMetadata()).free(this.allocatorValue);
 		} else {
 			throw new IllegalStateException("Cannot free twice the same block");
 		}

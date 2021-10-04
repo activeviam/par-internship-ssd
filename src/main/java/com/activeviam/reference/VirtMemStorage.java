@@ -2,11 +2,12 @@ package com.activeviam.reference;
 
 import com.activeviam.platform.LinuxPlatform;
 
-public class SuperblockManager extends ABlockAllocator {
+public class VirtMemStorage extends ABlockStackAllocator {
 
     protected static final LinuxPlatform PLATFORM = LinuxPlatform.getInstance();
 
     protected final boolean useHugePage;
+    protected boolean lockVirtMem;
 
     /**
      * Default constructor.
@@ -14,9 +15,10 @@ public class SuperblockManager extends ABlockAllocator {
      * @param size      Size of memory (in bytes) that will be allocated when calling {@link #allocate()}.
      * @param blockSize amount of virtual memory to reserve for an entire block
      */
-    public SuperblockManager(long size, long blockSize, boolean useHugePage) {
+    public VirtMemStorage(long size, long blockSize, boolean useHugePage) {
         super(size, blockSize);
         this.useHugePage = useHugePage;
+        this.lockVirtMem = false;
     }
 
     @Override
@@ -49,6 +51,7 @@ public class SuperblockManager extends ABlockAllocator {
             PLATFORM.setSoftLimit(PLATFORM.RLIMIT_MEMLOCK, size);
         }
 
+        this.lockVirtMem = true;
         PLATFORM.mlock(address, size);
         return address;
     }
@@ -60,5 +63,10 @@ public class SuperblockManager extends ABlockAllocator {
     protected void doFree(long ptr, long size) { }
 
     @Override
-    protected void doRelease(long ptr, long size) { PLATFORM.munmap(ptr, size); }
+    protected void doRelease(long ptr, long size) {
+        if (this.lockVirtMem) {
+            PLATFORM.munlock(ptr, size);
+        }
+        PLATFORM.munmap(ptr, size);
+    }
 }

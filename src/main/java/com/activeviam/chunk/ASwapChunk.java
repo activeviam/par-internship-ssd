@@ -1,6 +1,6 @@
 package com.activeviam.chunk;
 
-import com.activeviam.MemoryAllocator;
+import com.activeviam.IMemoryAllocator;
 import com.activeviam.UnsafeUtil;
 import com.activeviam.platform.LinuxPlatform;
 import com.activeviam.reference.*;
@@ -11,7 +11,7 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.LongSupplier;
 
-public abstract class AbstractSuperblockChunk<K> implements Chunk<K>, Closeable {
+public abstract class ASwapChunk<K> implements Chunk<K>, Closeable {
 
     private static final LongSupplier ID_GENERATOR = new AtomicLong()::getAndIncrement;
 
@@ -21,15 +21,15 @@ public abstract class AbstractSuperblockChunk<K> implements Chunk<K>, Closeable 
 
     public static class Header {
 
-        private final MemoryAllocator.ReturnValue allocatorValue;
+        private final IMemoryAllocator.ReturnValue allocatorValue;
         private final int fd;
 
-        public Header(final MemoryAllocator.ReturnValue value, final int fd) {
+        public Header(final IMemoryAllocator.ReturnValue value, final int fd) {
             this.allocatorValue = value;
             this.fd = fd;
         }
 
-        public MemoryAllocator.ReturnValue getAllocatorValue() {
+        public IMemoryAllocator.ReturnValue getAllocatorValue() {
             return this.allocatorValue;
         }
         public int getFd() {
@@ -37,14 +37,14 @@ public abstract class AbstractSuperblockChunk<K> implements Chunk<K>, Closeable 
         }
     }
 
-    protected final SuperblockMemoryAllocator allocator;
+    protected final SwapMemoryAllocator allocator;
     protected final int capacity;
     protected final long blockSize;
     protected Header header;
     protected final Lock chunkLock;
 
-    public AbstractSuperblockChunk(
-            final SuperblockMemoryAllocator allocator, final int capacity, final long blockSize) {
+    public ASwapChunk(
+            final SwapMemoryAllocator allocator, final int capacity, final long blockSize) {
         this.allocator = allocator;
         this.capacity = capacity;
         this.blockSize = blockSize;
@@ -67,8 +67,7 @@ public abstract class AbstractSuperblockChunk<K> implements Chunk<K>, Closeable 
     @Override
     public void close() {
         if (this.header.allocatorValue != null) {
-            this.header.allocatorValue.getBlockAllocator().free(this.header.allocatorValue);
-            this.header.allocatorValue.desactivateBlock();
+            ((ABlockStackAllocator)(this.header.allocatorValue.getMetadata())).free(this.header.allocatorValue);
             PLATFORM.closeFile(this.header.fd);
         } else {
             throw new IllegalStateException("Cannot free twice the same block");
@@ -83,24 +82,27 @@ public abstract class AbstractSuperblockChunk<K> implements Chunk<K>, Closeable 
             return;
         }
 
-        Header newHeader;
+        Header newHeader = assignNewMemoryBlock(this.header.getFd());
+        final var allocatorValue = newHeader.getAllocatorValue();
+        final var superblock = (SwapBlockAllocator) allocatorValue.getMetadata();
+
+        superblock.rwlock().readLock().lock();
         try {
-            newHeader = assignNewMemoryBlock(this.header.getFd());
-            if (newHeader.getAllocatorValue().isActiveBlock()) {
-                final long newAddress = newHeader.getAllocatorValue().getBlockAddress();
+            final long newAddress = allocatorValue.getBlockAddress();
+            if (superblock.isActive()) {
                 PLATFORM.readFromFile(this.header.getFd(), newAddress, this.blockSize);
                 this.header = newHeader;
             }
         } finally {
+            superblock.rwlock().readLock().unlock();
             this.chunkLock.unlock();
         }
     }
 
     private Header assignNewMemoryBlock(int fd) {
         final var av = this.allocator.allocateMemory(this.blockSize);
-
         final Header header = new Header(av, fd);
-        final Superblock superblock = (Superblock)av.getBlockAllocator();
+        final var superblock = (SwapBlockAllocator)av.getMetadata();
         superblock.registerOwner(header);
         return header;
     }

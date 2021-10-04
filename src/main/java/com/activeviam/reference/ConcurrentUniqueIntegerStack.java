@@ -223,7 +223,7 @@ public class ConcurrentUniqueIntegerStack {
   }
 
   public boolean contains(int value) {
-    return table[value] != free;
+    return this.table[value] != this.free;
   }
 
   @Override

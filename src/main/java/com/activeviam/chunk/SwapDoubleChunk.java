@@ -1,20 +1,20 @@
 package com.activeviam.chunk;
 
-import com.activeviam.UnsafeUtil;
-import com.activeviam.reference.Superblock;
-import com.activeviam.reference.SuperblockMemoryAllocator;
+import com.activeviam.reference.ABlockStackAllocator;
+import com.activeviam.reference.SwapBlockAllocator;
+import com.activeviam.reference.SwapMemoryAllocator;
 
 import java.util.logging.Logger;
 
-import static com.activeviam.MemoryAllocator.PAGE_SIZE;
+import static com.activeviam.IMemoryAllocator.PAGE_SIZE;
 import static com.activeviam.reference.IBlockAllocator.NULL_POINTER;
 
-public class SuperblockDoubleChunk extends AbstractSuperblockChunk<Double> implements DoubleChunk {
+public class SwapDoubleChunk extends ASwapChunk<Double> implements DoubleChunk {
 
     /** The order of the size in bytes of an element. */
     private static final int ELEMENT_SIZE_ORDER = 3;
 
-    public SuperblockDoubleChunk(final SuperblockMemoryAllocator allocator, final int capacity) {
+    public SwapDoubleChunk(final SwapMemoryAllocator allocator, final int capacity) {
         super(allocator, capacity, computeBlockSize(capacity));
     }
 
@@ -36,12 +36,12 @@ public class SuperblockDoubleChunk extends AbstractSuperblockChunk<Double> imple
 
         for (;;) {
             final var allocatorValue = this.header.getAllocatorValue();
-            final var blockAllocator = allocatorValue.getBlockAllocator();
+            final var blockAllocator = (SwapBlockAllocator)allocatorValue.getMetadata();
             final var rwlock = blockAllocator.rwlock();
 
             if (rwlock.readLock().tryLock()) {
                 try {
-                    if (allocatorValue.isActiveBlock()) {
+                    if (blockAllocator.isActive()) {
                         blockAllocator.updateTimestamp();
                         return UNSAFE.getDouble(offset(position << ELEMENT_SIZE_ORDER));
                     }
@@ -60,12 +60,12 @@ public class SuperblockDoubleChunk extends AbstractSuperblockChunk<Double> imple
         for (;;) {
 
             final var allocatorValue = this.header.getAllocatorValue();
-            final var blockAllocator = allocatorValue.getBlockAllocator();
+            final var blockAllocator = (SwapBlockAllocator)allocatorValue.getMetadata();
             final var rwlock = blockAllocator.rwlock();
 
             if (rwlock.readLock().tryLock()) {
                 try {
-                    if (allocatorValue.isActiveBlock()) {
+                    if (blockAllocator.isActive()) {
                         blockAllocator.updateTimestamp();
                         allocatorValue.dirtyBlock();
                         UNSAFE.putDouble(offset(position << ELEMENT_SIZE_ORDER), value);

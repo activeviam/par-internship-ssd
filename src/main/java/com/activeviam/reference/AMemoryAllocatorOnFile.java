@@ -1,6 +1,6 @@
 package com.activeviam.reference;
 
-import com.activeviam.MemoryAllocator;
+import com.activeviam.IMemoryAllocator;
 import com.activeviam.UnsafeUtil;
 import com.activeviam.platform.LinuxPlatform;
 import java.io.Closeable;
@@ -11,7 +11,7 @@ import java.util.Map;
 import java.util.logging.Logger;
 
 /** @author ActiveViam */
-public abstract class AMemoryAllocatorOnFile implements MemoryAllocator, Closeable {
+public abstract class AMemoryAllocatorOnFile implements IMemoryAllocator, Closeable {
   /** Class logger. */
   protected static final Logger logger = Logger.getLogger("allocator");
 
@@ -129,7 +129,7 @@ public abstract class AMemoryAllocatorOnFile implements MemoryAllocator, Closeab
   protected interface IBlockAllocatorFactory {
 
     /**
-     * Creates a new {@link ABlockAllocator}.
+     * Creates a new {@link ABlockStackAllocator}.
      *
      * @param size Size of memory (in bytes) that will be allocated when calling {@link
      *     IBlockAllocator#allocate()}.
@@ -138,6 +138,6 @@ public abstract class AMemoryAllocatorOnFile implements MemoryAllocator, Closeab
      *     supports them).
      * @return a new {@link IBlockAllocator}
      */
-    ABlockAllocator create(long size, long blockSize, boolean useHugePage);
+    ABlockStackAllocator create(long size, long blockSize, boolean useHugePage);
   }
 }

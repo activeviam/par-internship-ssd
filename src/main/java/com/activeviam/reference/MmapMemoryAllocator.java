@@ -2,9 +2,9 @@ package com.activeviam.reference;
 
 import java.nio.file.Path;
 
-public class MemoryAllocatorWithMmap extends AMemoryAllocatorOnFile {
+public class MmapMemoryAllocator extends AMemoryAllocatorOnFile {
 
-    public MemoryAllocatorWithMmap(final Path dir) {
+    public MmapMemoryAllocator(final Path dir) {
         super(dir);
     }
 
@@ -14,12 +14,12 @@ public class MemoryAllocatorWithMmap extends AMemoryAllocatorOnFile {
     }
 
     @Override
-    public void freeMemory(ReturnValue value) { value.getBlockAllocator().free(value); }
+    public void freeMemory(ReturnValue value) { ((ABlockStackAllocator)(value.getMetadata())).free(value); }
 
     @Override
     protected IBlockAllocatorFactory createBlockAllocatorFactory() {
         return (size, blockSize, useHugePage) -> {
-            final var ba = new BlockAllocatorOnFile(this.dir, size, blockSize, useHugePage);
+            final var ba = new MmapBlockAllocator(this.dir, size, blockSize, useHugePage);
             ba.init();
             return ba;
         };

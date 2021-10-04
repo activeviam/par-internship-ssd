@@ -8,14 +8,14 @@
 package com.activeviam.chunk;
 
 import com.activeviam.UnsafeUtil;
-import com.activeviam.reference.MemoryAllocatorWithMmap;
+import com.activeviam.reference.MmapMemoryAllocator;
 
 import java.util.BitSet;
 import java.util.logging.Logger;
 
-import static com.activeviam.MemoryAllocator.PAGE_SIZE;
+import static com.activeviam.IMemoryAllocator.PAGE_SIZE;
 
-public class FileIntegerChunk extends AbstractFileChunk<Integer> implements IntegerChunk {
+public class MmapIntegerChunk extends AMmapChunk<Integer> implements IntegerChunk {
 
 	/** Unsafe provider. */
 	private static final sun.misc.Unsafe UNSAFE = UnsafeUtil.getUnsafe();
@@ -23,7 +23,7 @@ public class FileIntegerChunk extends AbstractFileChunk<Integer> implements Inte
 	/** The order of the size in bytes of an element. */
 	private static final int ELEMENT_SIZE_ORDER = 2;
 
-	public FileIntegerChunk(final MemoryAllocatorWithMmap allocator, final int capacity) {
+	public MmapIntegerChunk(final MmapMemoryAllocator allocator, final int capacity) {
 		super(allocator, capacity, computeBlockSize(capacity));
 	}
 

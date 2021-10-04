@@ -6,7 +6,7 @@
  */
 package com.activeviam.chunk;
 
-import static com.activeviam.MemoryAllocator.PAGE_SIZE;
+import static com.activeviam.IMemoryAllocator.PAGE_SIZE;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.stream.IntStream;

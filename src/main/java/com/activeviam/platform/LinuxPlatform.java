@@ -304,6 +304,12 @@ public class LinuxPlatform {
     }
   }
 
+  public void munlock(long addr, long size) {
+    if (cLib.munlock(addr, size) != 0) {
+      Errno.throwLastError("munlockall", "void");
+    }
+  }
+
   public long mmapFile(int fd, long size, boolean useHugePage) {
     if (cLib == null) {
       throw new RuntimeException(

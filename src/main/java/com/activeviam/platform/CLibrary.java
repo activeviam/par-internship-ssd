@@ -272,7 +272,7 @@ interface CLibrary extends Library {
   // int mlock(void *addr, size_t length);
   int mlock(long addr, long length);
 
-
+  int munlock(long addr, long length);
 
   /**
    * The madvise() system call advises the kernel about how to handle paging input/output in the

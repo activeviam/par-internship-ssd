@@ -12,7 +12,7 @@ import java.util.function.LongSupplier;
 
 import static com.activeviam.reference.AMemoryAllocatorOnFile.PAGE_SIZE;
 
-class BlockAllocatorOnFile extends ABlockAllocator {
+class MmapBlockAllocator extends ABlockStackAllocator {
 
   protected static final LongSupplier ID_GENERATOR = new AtomicLong()::getAndIncrement;
 
@@ -36,7 +36,7 @@ class BlockAllocatorOnFile extends ABlockAllocator {
    * @param useHugePage true to indicate to the system that it should use huge pages (if it supports
    *     them).
    */
-  public BlockAllocatorOnFile(Path dir, long size, long blockSize, boolean useHugePage) {
+  public MmapBlockAllocator(Path dir, long size, long blockSize, boolean useHugePage) {
     super(size, blockSize);
     this.useHugePage = useHugePage;
 

@@ -7,7 +7,7 @@
 
 package com.activeviam.reference;
 
-import com.activeviam.MemoryAllocator;
+import com.activeviam.IMemoryAllocator;
 import com.activeviam.UnsafeUtil;
 
 import java.util.concurrent.locks.ReadWriteLock;
@@ -20,7 +20,7 @@ import java.util.logging.Logger;
  *
  * @author ActiveViam
  */
-public abstract class ABlockAllocator implements IBlockAllocator {
+public abstract class ABlockStackAllocator implements IBlockAllocator {
 
   /** Logger. */
   protected static final Logger LOGGER = Logger.getLogger("allocator");
@@ -66,7 +66,7 @@ public abstract class ABlockAllocator implements IBlockAllocator {
    * @param size Size of memory (in bytes) that will be allocated when calling {@link #allocate()}.
    * @param blockSize amount of virtual memory to reserve for an entire block
    */
-  public ABlockAllocator(final long size, final long blockSize) {
+  public ABlockStackAllocator(final long size, final long blockSize) {
     this.size = size;
     this.blockSize = blockSize;
     this.capacity = (int) (blockSize / size);
@@ -127,7 +127,7 @@ public abstract class ABlockAllocator implements IBlockAllocator {
   }
 
   @Override
-  public MemoryAllocator.ReturnValue allocate() {
+  public IMemoryAllocator.ReturnValue allocate() {
     long ptr;
     boolean unused = false;
 
@@ -167,18 +167,19 @@ public abstract class ABlockAllocator implements IBlockAllocator {
     }
 
     this.updateTimestamp();
-    return new MemoryAllocator.ReturnValue(this, ptr);
+    return new IMemoryAllocator.ReturnValue(this, ptr);
   }
 
   @Override
-  public void free(MemoryAllocator.ReturnValue value) {
+  public void free(IMemoryAllocator.ReturnValue value) {
     // Decommit before pushing the pointer in the stack to
     // prevent another thread to retrieve the pointer before
     // decommitting and start writing/ using this piece of mem.
 
-    doFree(value.getBlockAddress(), this.size);
+    final long ptr = value.getBlockAddress();
+    doFree(ptr, this.size);
 
-    final int pos = getPosition(value.getBlockAddress());
+    final int pos = getPosition(ptr);
 
     // Store address for later usage
     if (this.items.push(pos)) {
@@ -227,8 +228,14 @@ public abstract class ABlockAllocator implements IBlockAllocator {
   }
 
   public void release() {
+    int newC;
+    do {
+      newC = this.count;
+      if (newC < 0) {
+        return;
+      }
+    } while (!casCount(this, newC, -1));
     doRelease(this.blockAddress, this.blockSize);
-    this.count = -1;
   }
 
   protected abstract long virtualAlloc(long size);
@@ -262,9 +269,9 @@ public abstract class ABlockAllocator implements IBlockAllocator {
   }
 
   protected static final long countOffset =
-      UnsafeUtil.getFieldOffset(ABlockAllocator.class, "count");
+      UnsafeUtil.getFieldOffset(ABlockStackAllocator.class, "count");
   protected static final long lastAddressOffset =
-      UnsafeUtil.getFieldOffset(ABlockAllocator.class, "lastAddress");
+      UnsafeUtil.getFieldOffset(ABlockStackAllocator.class, "lastAddress");
 
   /**
    * Static wrappers for UNSAFE methods {@link UnsafeUtil#compareAndSwapInt(Object, long, int, int)}
@@ -276,7 +283,7 @@ public abstract class ABlockAllocator implements IBlockAllocator {
    *     expected value.
    */
   protected static final boolean casCount(
-      final ABlockAllocator blockAllocator, final int expected, final int updated) {
+      final ABlockStackAllocator blockAllocator, final int expected, final int updated) {
     return UnsafeUtil.compareAndSwapInt(blockAllocator, countOffset, expected, updated);
   }
 
@@ -290,7 +297,7 @@ public abstract class ABlockAllocator implements IBlockAllocator {
    *     expected value.
    */
   protected static final boolean casLastAddress(
-      final ABlockAllocator blockAllocator, final long expected, final long updated) {
+      final ABlockStackAllocator blockAllocator, final long expected, final long updated) {
     return UnsafeUtil.compareAndSwapLong(blockAllocator, lastAddressOffset, expected, updated);
   }
 
