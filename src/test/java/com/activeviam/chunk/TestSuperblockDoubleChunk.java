@@ -36,7 +36,7 @@ public class TestSuperblockDoubleChunk implements SpecTestDoubleChunk {
     @Test
     void testArbitration() {
 
-        final int numThreads = 5;
+        final int numThreads = 2;
         final List<Thread> threads = new LinkedList<>();
 
         for (int threadId = 0; threadId < numThreads; threadId++) {
@@ -74,12 +74,56 @@ public class TestSuperblockDoubleChunk implements SpecTestDoubleChunk {
                 e.printStackTrace();
             }
         }
+
+        System.out.println(this.allocator.getSwapCounter());
     }
 
     @Test
     void testFree() {
 
+        final int numThreads = 9;
+        final List<Thread> threads = new LinkedList<>();
 
+        for (int threadId = 0; threadId < numThreads; threadId++) {
+
+            final int id = threadId + 1;
+
+            final Thread thread = new Thread(() -> {
+
+                for (int k = 0; k < 10; k++) {
+                    final var chunk = new SwapDoubleChunk(this.allocator, 1 << (id + 9));
+
+                    for (int i = 0; i < chunk.capacity(); i++) {
+                        chunk.writeDouble(i, -5.8 * id * i);
+                    }
+
+                    for (int i = 0; i < chunk.capacity(); i++) {
+                        if (chunk.readDouble(i) != -5.8 * id * i) {
+                            System.out.println("[" + i
+                                    + "] expected = " + (-5.8 * id * i)
+                                    + ", actual = " + chunk.readDouble(i)
+                                    + ", dirty? " + chunk.header.getAllocatorValue().isDirtyBlock()
+                                    + ", allocator " + ((SwapBlockAllocator)(chunk.header.getAllocatorValue().getMetadata())).isActive());
+                        }
+                    }
+
+                    chunk.close();
+                }
+            }, "thread " + id);
+
+            threads.add(thread);
+            thread.start();
+        }
+
+        for (Thread thread : threads) {
+            try {
+                thread.join();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+
+        System.out.println(this.allocator.getSwapCounter());
     }
 
     @TempDir
@@ -88,7 +132,7 @@ public class TestSuperblockDoubleChunk implements SpecTestDoubleChunk {
     @BeforeEach
     void createAllocator() {
         final long hugePageSize = 1 << 21;
-        this.allocator = new SwapMemoryAllocator(tempDir, hugePageSize, 3 * hugePageSize, false);
+        this.allocator = new SwapMemoryAllocator(tempDir, hugePageSize,  hugePageSize, false);
     }
 
     @AfterEach

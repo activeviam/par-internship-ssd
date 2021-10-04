@@ -80,19 +80,9 @@ public class SwapBlockAllocator extends ABlockStackAllocator {
      * @param owner header of the chunk to register
      * @return true if the chunk header has been registered, false otherwise.
      */
-    public boolean registerOwner(ASwapChunk.Header owner) {
-        this.rwlock.readLock().lock();
-        try {
-            if (this.isActive()) {
-                final int pos = getPosition(owner.getAllocatorValue().getBlockAddress());
-                OWNERS.setVolatile(this.owners, pos, owner);
-                return true;
-            } else {
-                return false;
-            }
-        } finally {
-            this.rwlock.readLock().unlock();
-        }
+    public void registerOwner(ASwapChunk.Header owner) {
+        final int pos = getPosition(owner.getAllocatorValue().getBlockAddress());
+        OWNERS.setVolatile(this.owners, pos, owner);
     }
 
     @Override

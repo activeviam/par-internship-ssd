@@ -66,44 +66,49 @@ public abstract class ASwapChunk<K> implements Chunk<K>, Closeable {
 
     @Override
     public void close() {
-        if (this.header.allocatorValue != null) {
-            ((ABlockStackAllocator)(this.header.allocatorValue.getMetadata())).free(this.header.allocatorValue);
-            PLATFORM.closeFile(this.header.fd);
-        } else {
-            throw new IllegalStateException("Cannot free twice the same block");
-        }
-    }
-
-    protected void relocateMemoryBlock() {
-
-        if (!this.chunkLock.tryLock()) {
-            this.chunkLock.lock();
-            this.chunkLock.unlock();
-            return;
-        }
-
-        Header newHeader = assignNewMemoryBlock(this.header.getFd());
-        final var allocatorValue = newHeader.getAllocatorValue();
+        final var allocatorValue = this.header.getAllocatorValue();
         final var superblock = (SwapBlockAllocator) allocatorValue.getMetadata();
 
         superblock.rwlock().readLock().lock();
         try {
-            final long newAddress = allocatorValue.getBlockAddress();
             if (superblock.isActive()) {
-                PLATFORM.readFromFile(this.header.getFd(), newAddress, this.blockSize);
-                this.header = newHeader;
+                superblock.free(allocatorValue);
             }
         } finally {
             superblock.rwlock().readLock().unlock();
+        }
+
+        PLATFORM.closeFile(this.header.fd);
+    }
+
+    protected void relocateMemoryBlock() {
+        try {
+            if (this.chunkLock.tryLock()) {
+                this.header = assignNewMemoryBlock(this.header.fd);
+            } else {
+                this.chunkLock.lock();
+            }
+        } finally {
             this.chunkLock.unlock();
         }
     }
 
     private Header assignNewMemoryBlock(int fd) {
         final var av = this.allocator.allocateMemory(this.blockSize);
-        final Header header = new Header(av, fd);
+        final long newAddress = av.getBlockAddress();
+        final Header newHeader = new Header(av, fd);
+
         final var superblock = (SwapBlockAllocator)av.getMetadata();
-        superblock.registerOwner(header);
-        return header;
+        superblock.rwlock().readLock().lock();
+
+        try {
+            if (superblock.isActive()) {
+                superblock.registerOwner(newHeader);
+                PLATFORM.readFromFile(fd, newAddress, this.blockSize);
+            }
+            return newHeader;
+        } finally {
+            superblock.rwlock().readLock().unlock();
+        }
     }
 }
