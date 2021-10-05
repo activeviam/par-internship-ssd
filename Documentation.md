@@ -42,11 +42,8 @@ The further examples of metadata usage may complete this explanation.
 
 Every block allocated by `IMemoryAllocator` implementation should be 8 byte aligned.
 Thus, the least significant bits of the `blockAddress` field can be used for
-useful flags. First flag of the block indicates the "dirtiness": this flag
-is set if the block data has been recently modified. Second flag indicates the
-"activeness" of the block: if the block isn't active, its data is considered as a
-garbage and may be reused in further allocations. The second flag is a bit excessive,
-but it facilitates many operations as we will see later.
+useful flags. The only flag used in the current implementation indicates
+the "dirtiness": it is set if the block data has been recently modified.
 
 Any class implementing a `IMemoryAllocator` should provide functions to
 allocate the RAM memory region of a given size and to free the RAM memory
@@ -295,17 +292,18 @@ controlled by `ReturnValue` objects:
 On the diagram, two-headed arrows between objects represent the identity, and
 one-headed arrows represent the memory pointers. As one may see,
 each `SwapBlockAllocator` can be viewed as an individual brick in the system
-of the `SwapMemoryAllocator`. It never allocates RAM itself: instead, it
-calls `allocate()` method of `VirtMemStorage` at the initialization stage
-and corresponding `free()` on release.
+of the off-heap memory management. The `SwapBlockAllocator` never allocates RAM
+itself: instead, it calls `allocate()` method of `VirtMemStorage` at the
+initialization stage and corresponding `free()` method on release.
 
 The important detail in the implementation of the `SwapBlockAllocator`
 is a swap operation. It is called whenever the `SwapMemoryAllocator` decides to
-release a memory superblock controlled by the `SwapBlockAllocator` and to push it back
-to the `VirtMemStorage`. However, in case of the swap external objects may still want to use the released
-memory. That's why each external object that wants to use the memory allocated by
-`SwapMemoryAllocator`should register itself in the memory of the `SwapBlockAllocator` it used for the
-allocation.
+release a memory superblock controlled by the `SwapBlockAllocator` and to push it
+back to the `VirtMemStorage`.
+However, external objects may still want to use the released
+memory after the swap. That's why each external object that wants to use the memory
+allocated by `SwapMemoryAllocator` should firstly register itself in the internal
+memory of the `SwapBlockAllocator` used for the allocation.
 
 In fact, directly after the swap the `SwapBlockAllocator` cannot guarantee anything 
 about the validity of the memory it has already released. So it should somehow inform
@@ -316,7 +314,8 @@ may be further loaded back to RAM.
 
 In the current implementation an "external object" is simply a chunk.
 However, chunks carry a type information, and it is absolutely unnecessary 
-to propagate this information to allocators. Instead, an object called
+to propagate this information to allocators. So one cannot simply pass
+the address of the chunk to the `SwapBlockAllocator`. Instead, an object called
 `ASwapChunk.Header` is used:
 ```java
 public abstract class ASwapChunk<K> implements Chunk<K>, Closeable {
@@ -340,201 +339,94 @@ by the chunk is accessible from `swap()` method of `SwapBlockAllocator` through 
 object called `Header` contained in the chunk and referenced from `SwapBlockAllocator`. 
 
 In the current implementation, the references to the owners of the blocks are simply
-stored in an array called `owners`. There are some important memory order issues
-with this 
+stored in an array called `owners`. An index in the array corresponds to the position
+of the block controlled by `Header` in the superblock. If the block has no owner, its
+entry in the array is null.
 
-The first step of the `swap()` operation is to iterate over the owners. 
+It is not the best data structure to perform a swap on,
+because one needs to iterate over the whole array in linear time to find all non-null
+owners. However, it is a suitable enough to allocate and to free blocks, because
+the modifications may be carried out in constant time simultaneously by different
+threads with no synchronization at all: it is a guarantee of the allocator
+that two different external objects never share the same off-heap data segment, and
+it is a natural constraint for the user program to free each block only once, so
+in practice two different threads should never access the same index
+in the `owners` array.
 
+The first step of the `swap()` operation is to iterate over the registered owners
+(chunks) and to write each block that has an owner to its file on disk. After that
+each block is freed in a sense of the block stack allocator and its owner
+is unregistered.
 
-# Dillinger
-## _The Last Markdown Editor, Ever_
+The second step is to mark the `SwapBlockAllocator` as inactive. It is done simply
+by setting a boolean flag `active` of the `SwapBlockAllocator`. We will describe later
+why the flag is marked as volatile.
 
-[![N|Solid](https://cldup.com/dTxpPi9lDf.thumb.png)](https://nodesource.com/products/nsolid)
+There are multiple ways to choose a `SwapBlockAllocator` to be released. In the 
+current implementation a simple counter called `usages` is used to count the calls
+to the `active()` method. Such a choice would be justified in detail in the next
+section. Briefly, each external object must always call the `active()` method on its
+allocator prior to any operation on the memory to avoid using garbage memory.
 
-[![Build Status](https://travis-ci.org/joemccann/dillinger.svg?branch=master)](https://travis-ci.org/joemccann/dillinger)
+The function `usages()` not only returns the current value of the counter, but also
+assigns a zero value to the counter afterwards. It may be not the best practice, but
+the idea behind is that `usages()` function is only called by a swap function and is
+called on all the blocks observed by the swap.
 
-Dillinger is a cloud-enabled, mobile-ready, offline-storage compatible,
-AngularJS-powered HTML5 Markdown editor.
+So, in some sense, the `usages` field keeps an approximate number of memory
+IO operations on the block happened after the last swap operation. If the number
+is large enough, it means that the block allocator is used quite frequently.
+The algorithm is not perfect: some block allocators may be unreached by the swap
+function, and the time passed between two consecutive swaps is an unbounded value
+(it is even desirable to have this value as large as possible).
+We don't discuss this algorithm further in the documentation because it is
+very likely to be reimplemented in the future.
 
-- Type some Markdown on the left
-- See HTML in the right
-- ✨Magic ✨
+## _Swap Chunks_
 
-## Features
+As we've already mentioned above, it is necessary for any object using the
+`SwapMemoryAllocator` to monitor the state of the most recently used
+block allocator and to reallocate its memory if the block allocator is deactivated.
 
-- Import a HTML file and watch it magically convert to Markdown
-- Drag and drop images (requires your Dropbox account be linked)
-- Import and save files from GitHub, Dropbox, Google Drive and One Drive
-- Drag and drop markdown and HTML files into Dillinger
-- Export documents as Markdown, HTML and PDF
+Let's get back to the object called `ASwapChunk`. It has already been discussed 
+in the previous section that each `ASwapChunk` has a field `Header` and this
+header is referenced in the `SwapBlockAllocator` that allocated the last memory
+region of the chunk.
 
-Markdown is a lightweight markup language based on the formatting conventions
-that people naturally use in email.
-As [John Gruber] writes on the [Markdown site][df1]
+This object has an important method called `relocateMemory()`. It allocates
+a new piece of memory, constructs a new header, and then tries to register the chunk
+in the most recently used allocator. If at the moment the allocator is still active,
+the method reads the SSD file backup into this new memory region. the method 
+`relocateMemory()` is "coupled" with a `swap()` method. It is called if and only if 
+a swap happened between two memory accesses to the memory region. The writing to SSD
+happens in the `swap()`, while the reading happens in the `relocateMemory()`. But
+as these methods belong to different classes, it should be now more clear why there is
+a registration of the owners in `SwapBlockAllocator` and why the swap chunk and the
+swap allocator should mutually point to each other's fields: they share a
+common responsibility to restore a system state after each swap of the part of the
+RAM on SSD.
 
-> The overriding design goal for Markdown's
-> formatting syntax is to make it as readable
-> as possible. The idea is that a
-> Markdown-formatted document should be
-> publishable as-is, as plain text, without
-> looking like it's been marked up with tags
-> or formatting instructions.
+It is essential for some IO operations on swap chunks to ensure that no `swap()`
+happens during the operation: that is why each `SwapBlockAllocator` has a read-write
+lock. The only place in the code where an exclusive write lock is taken is a `swap()`
+function. The read lock, however, may be called from anywhere in the program and there
+is a public method to call it.
 
-This text you see here is *actually- written in Markdown! To get a feel
-for Markdown's syntax, type some text into the left window and
-watch the results in the right.
+It is called by `ASwapChunk` at the relocation stage
+to ensure that the `swap()` doesn't iterate through the `owners` while
+`relocateMemory()` modifies one of the elements and reads the file content to
+the new address.
 
-## Tech
+It is also called by all methods that modify the memory, e.g. `writeDouble()` or 
+`writeInt()`: one cannot guarantee a
+correctness if the flush of the data to the file is performed concurrently with
+the data modification.
 
-Dillinger uses a number of open source projects to work properly:
-
-- [AngularJS] - HTML enhanced for web apps!
-- [Ace Editor] - awesome web-based text editor
-- [markdown-it] - Markdown parser done right. Fast and easy to extend.
-- [Twitter Bootstrap] - great UI boilerplate for modern web apps
-- [node.js] - evented I/O for the backend
-- [Express] - fast node.js network app framework [@tjholowaychuk]
-- [Gulp] - the streaming build system
-- [Breakdance](https://breakdance.github.io/breakdance/) - HTML
-to Markdown converter
-- [jQuery] - duh
-
-And of course Dillinger itself is open source with a [public repository][dill]
- on GitHub.
-
-## Installation
-
-Dillinger requires [Node.js](https://nodejs.org/) v10+ to run.
-
-Install the dependencies and devDependencies and start the server.
-
-```sh
-cd dillinger
-npm i
-node app
-```
-
-For production environments...
-
-```sh
-npm install --production
-NODE_ENV=production node app
-```
-
-## Plugins
-
-Dillinger is currently extended with the following plugins.
-Instructions on how to use them in your own application are linked below.
-
-| Plugin | README |
-| ------ | ------ |
-| Dropbox | [plugins/dropbox/README.md][PlDb] |
-| GitHub | [plugins/github/README.md][PlGh] |
-| Google Drive | [plugins/googledrive/README.md][PlGd] |
-| OneDrive | [plugins/onedrive/README.md][PlOd] |
-| Medium | [plugins/medium/README.md][PlMe] |
-| Google Analytics | [plugins/googleanalytics/README.md][PlGa] |
-
-## Development
-
-Want to contribute? Great!
-
-Dillinger uses Gulp + Webpack for fast developing.
-Make a change in your file and instantaneously see your updates!
-
-Open your favorite Terminal and run these commands.
-
-First Tab:
-
-```sh
-node app
-```
-
-Second Tab:
-
-```sh
-gulp watch
-```
-
-(optional) Third:
-
-```sh
-karma test
-```
-
-#### Building for source
-
-For production release:
-
-```sh
-gulp build --prod
-```
-
-Generating pre-built zip archives for distribution:
-
-```sh
-gulp build dist --prod
-```
-
-## Docker
-
-Dillinger is very easy to install and deploy in a Docker container.
-
-By default, the Docker will expose port 8080, so change this within the
-Dockerfile if necessary. When ready, simply use the Dockerfile to
-build the image.
-
-```sh
-cd dillinger
-docker build -t <youruser>/dillinger:${package.json.version} .
-```
-
-This will create the dillinger image and pull in the necessary dependencies.
-Be sure to swap out `${package.json.version}` with the actual
-version of Dillinger.
-
-Once done, run the Docker image and map the port to whatever you wish on
-your host. In this example, we simply map port 8000 of the host to
-port 8080 of the Docker (or whatever port was exposed in the Dockerfile):
-
-```sh
-docker run -d -p 8000:8080 --restart=always --cap-add=SYS_ADMIN --name=dillinger <youruser>/dillinger:${package.json.version}
-```
-
-> Note: `--capt-add=SYS-ADMIN` is required for PDF rendering.
-
-Verify the deployment by navigating to your server address in
-your preferred browser.
-
-```sh
-127.0.0.1:8000
-```
-
-## License
-
-MIT
-
-**Free Software, Hell Yeah!**
-
-[//]: # (These are reference links used in the body of this note and get stripped out when the markdown processor does its job. There is no need to format nicely because it shouldn't be seen. Thanks SO - http://stackoverflow.com/questions/4823468/store-comments-in-markdown-syntax)
-
-[dill]: <https://github.com/joemccann/dillinger>
-[git-repo-url]: <https://github.com/joemccann/dillinger.git>
-[john gruber]: <http://daringfireball.net>
-[df1]: <http://daringfireball.net/projects/markdown/>
-[markdown-it]: <https://github.com/markdown-it/markdown-it>
-[Ace Editor]: <http://ace.ajax.org>
-[node.js]: <http://nodejs.org>
-[Twitter Bootstrap]: <http://twitter.github.com/bootstrap/>
-[jQuery]: <http://jquery.com>
-[@tjholowaychuk]: <http://twitter.com/tjholowaychuk>
-[express]: <http://expressjs.com>
-[AngularJS]: <http://angularjs.org>
-[Gulp]: <http://gulpjs.com>
-
-[PlDb]: <https://github.com/joemccann/dillinger/tree/master/plugins/dropbox/README.md>
-[PlGh]: <https://github.com/joemccann/dillinger/tree/master/plugins/github/README.md>
-[PlGd]: <https://github.com/joemccann/dillinger/tree/master/plugins/googledrive/README.md>
-[PlOd]: <https://github.com/joemccann/dillinger/tree/master/plugins/onedrive/README.md>
-[PlMe]: <https://github.com/joemccann/dillinger/tree/master/plugins/medium/README.md>
-[PlGa]: <https://github.com/RahulHP/dillinger/blob/master/plugins/googleanalytics/README.md>
+However, the methods that do not modify the memory, e.g. `readDouble()` or
+`readInt()`, may perform without locking most of the time. It is done by first 
+reading a memory at the given address and then checking the `active()` flag: if the
+flag is set, it means that the written memory is valid and can be returned; otherwise,
+this memory is garbage or is already held by other chunk, and `relocateMemory()`
+should be performed. As the `active` field is declared volatile, a happens-before
+ordering guarantees that the read operation is never reordered
+after a flag check.

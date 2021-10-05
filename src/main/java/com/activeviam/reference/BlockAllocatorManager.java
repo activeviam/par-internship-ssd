@@ -25,24 +25,22 @@ import java.util.function.Predicate;
 public class BlockAllocatorManager implements IBlockAllocator {
 
   /** List of all underlying managed allocators */
-  private final Deque<ABlockStackAllocator> blocks;
+  protected final Deque<ABlockStackAllocator> blocks;
 
   /** Size of memory (in bytes) that will be allocated when calling {@link #allocate()}. */
-  private final long size;
+  protected final long size;
 
   /** The amount of virtual memory to reserve for a block */
-  private final long virtualBlockSize;
+  protected final long virtualBlockSize;
 
-  private volatile int ongoingCreation;
+  protected volatile int ongoingCreation;
 
-  private final AMemoryAllocatorOnFile.IBlockAllocatorFactory allocatorFactory;
-
-  private final long MIN_BALLOC_LIFE_DURATION = 0;
+  protected final AMemoryAllocatorOnFile.IBlockAllocatorFactory allocatorFactory;
 
   /**
    * boolean to indicate huge pages (if supported) can be requested when allocating block of memory
    */
-  private final boolean useHugePage;
+  protected final boolean useHugePage;
 
   /**
    * Default constructor.
@@ -208,16 +206,30 @@ public class BlockAllocatorManager implements IBlockAllocator {
             blockAllocatorManager, ongoingCreationOffset, expect, update);
   }
 
-  public void releaseCold() {
+  public void removeIf(Predicate<? super ABlockStackAllocator> predicate) {
+
+      final var it = this.blocks.iterator();
+
+      while (it.hasNext()) {
+        final var blockAllocator = it.next();
+        blockAllocator.release();
+        it.remove();
+      }
+
+      //this.blocks.removeIf(predicate);
+  }
+
+  public void remove() {
+
     final var it = this.blocks.iterator();
+
     while (it.hasNext()) {
       final var blockAllocator = it.next();
-      //final long currentTime = System.currentTimeMillis();
-      //if (blockAllocator.getTimestamp() + MIN_BALLOC_LIFE_DURATION < currentTime) {
       blockAllocator.release();
       it.remove();
-      //}
     }
+
+    //this.blocks.removeIf(predicate);
   }
 
 }

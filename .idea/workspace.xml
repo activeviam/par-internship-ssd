@@ -5,13 +5,21 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="1be14dd2-f86c-4912-8b38-b7c8578fe744" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/activeviam/chunk/SwapIntegerChunk.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Documentation.md" beforeDir="false" afterPath="$PROJECT_DIR$/Documentation.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/com/activeviam/chunk/ASwapChunk.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/activeviam/chunk/ASwapChunk.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/activeviam/reference/AMemoryAllocatorOnFile.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/activeviam/reference/AMemoryAllocatorOnFile.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/activeviam/chunk/SwapDoubleChunk.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/activeviam/chunk/SwapDoubleChunk.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/activeviam/reference/ABlockStackAllocator.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/activeviam/reference/ABlockStackAllocator.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/activeviam/reference/BlockAllocatorManager.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/activeviam/reference/BlockAllocatorManager.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/com/activeviam/reference/SwapBlockAllocator.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/activeviam/reference/SwapBlockAllocator.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/activeviam/reference/SwapMemoryAllocator.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/activeviam/reference/SwapMemoryAllocator.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/test/java/com/activeviam/chunk/TestSuperblockDoubleChunk.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/com/activeviam/chunk/TestSuperblockDoubleChunk.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/com/activeviam/reference/AMemoryAllocatorOnFile.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/activeviam/reference/AMemoryAllocatorOnFile.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/activeviam/chunk/ASwapChunk.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/activeviam/chunk/ASwapChunk.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/activeviam/chunk/SwapDoubleChunk.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/activeviam/chunk/SwapDoubleChunk.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/activeviam/reference/BlockAllocatorManager.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/activeviam/reference/BlockAllocatorManager.class" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/target/classes/com/activeviam/reference/SwapBlockAllocator.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/activeviam/reference/SwapBlockAllocator.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/activeviam/reference/SwapMemoryAllocator.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/activeviam/reference/SwapMemoryAllocator.class" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/target/test-classes/com/activeviam/chunk/TestSuperblockDoubleChunk.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/test-classes/com/activeviam/chunk/TestSuperblockDoubleChunk.class" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -154,6 +162,7 @@
       </method>
     </configuration>
     <list>
+      <item itemvalue="JUnit.TestSuperblockDoubleChunk.testArbitration" />
       <item itemvalue="JUnit.TestMemoryAllocatorOnFile.testVmemStorage" />
       <item itemvalue="JUnit.TestMemoryAllocatorOnFile.dequeRemove" />
       <item itemvalue="JUnit.TestHeapDoubleChunk.testArbitration" />

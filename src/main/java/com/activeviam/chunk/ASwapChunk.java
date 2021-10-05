@@ -37,11 +37,11 @@ public abstract class ASwapChunk<K> implements Chunk<K>, Closeable {
         }
     }
 
-    protected final SwapMemoryAllocator allocator;
-    protected final int capacity;
-    protected final long blockSize;
     protected Header header;
+    protected final SwapMemoryAllocator allocator;
     protected final Lock chunkLock;
+    protected final long blockSize;
+    protected final int capacity;
 
     public ASwapChunk(
             final SwapMemoryAllocator allocator, final int capacity, final long blockSize) {
@@ -69,13 +69,13 @@ public abstract class ASwapChunk<K> implements Chunk<K>, Closeable {
         final var allocatorValue = this.header.getAllocatorValue();
         final var superblock = (SwapBlockAllocator) allocatorValue.getMetadata();
 
-        superblock.rwlock().readLock().lock();
+        superblock.readLock().lock();
         try {
-            if (superblock.isActive()) {
+            if (superblock.active()) {
                 superblock.free(allocatorValue);
             }
         } finally {
-            superblock.rwlock().readLock().unlock();
+            superblock.readLock().unlock();
         }
 
         PLATFORM.closeFile(this.header.fd);
@@ -99,16 +99,16 @@ public abstract class ASwapChunk<K> implements Chunk<K>, Closeable {
         final Header newHeader = new Header(av, fd);
 
         final var superblock = (SwapBlockAllocator)av.getMetadata();
-        superblock.rwlock().readLock().lock();
+        superblock.readLock().lock();
 
         try {
-            if (superblock.isActive()) {
+            if (superblock.active()) {
                 superblock.registerOwner(newHeader);
                 PLATFORM.readFromFile(fd, newAddress, this.blockSize);
             }
             return newHeader;
         } finally {
-            superblock.rwlock().readLock().unlock();
+            superblock.readLock().unlock();
         }
     }
 }

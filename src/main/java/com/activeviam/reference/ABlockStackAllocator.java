@@ -9,9 +9,6 @@ package com.activeviam.reference;
 
 import com.activeviam.IMemoryAllocator;
 import com.activeviam.UnsafeUtil;
-
-import java.util.concurrent.locks.ReadWriteLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -37,10 +34,6 @@ public abstract class ABlockStackAllocator implements IBlockAllocator {
 
   /** The address that can be used to allocate an element within a block */
   protected volatile long lastAddress = -2;
-
-  protected final ReadWriteLock rwlock;
-
-  protected long timestamp;
 
   /**
    * A stack of available items that can be use to write/read a piece of memory within the allocated
@@ -72,13 +65,11 @@ public abstract class ABlockStackAllocator implements IBlockAllocator {
     this.capacity = (int) (blockSize / size);
     this.items = new ConcurrentUniqueIntegerStack(this.capacity);
     this.count = 0;
-    this.rwlock = new ReentrantReadWriteLock();
   }
 
   /** Must be called once before using {@link #allocate()}. */
   public boolean init() {
     final long blockPtr = virtualAlloc(this.blockSize);
-    this.timestamp = System.currentTimeMillis();
     if (blockPtr == NULL_POINTER) {
       return false;
     }
@@ -95,10 +86,6 @@ public abstract class ABlockStackAllocator implements IBlockAllocator {
   public int count() { return this.count; }
 
   public int capacity() { return this.capacity; }
-
-  public ReadWriteLock rwlock() {
-    return this.rwlock;
-  }
 
   /**
    * Get the address corresponding to the n-th piece of memory within the block. It is computed
@@ -166,7 +153,6 @@ public abstract class ABlockStackAllocator implements IBlockAllocator {
       doAllocate(ptr, size);
     }
 
-    this.updateTimestamp();
     return new IMemoryAllocator.ReturnValue(this, ptr);
   }
 
@@ -188,8 +174,6 @@ public abstract class ABlockStackAllocator implements IBlockAllocator {
       // with the same value does not decrement multiple times
       // the counter. Further more, when the counter value reaches 0,
       // the entire block can be released.
-
-      this.updateTimestamp();
 
       int newC;
       do {
@@ -299,13 +283,5 @@ public abstract class ABlockStackAllocator implements IBlockAllocator {
   protected static final boolean casLastAddress(
       final ABlockStackAllocator blockAllocator, final long expected, final long updated) {
     return UnsafeUtil.compareAndSwapLong(blockAllocator, lastAddressOffset, expected, updated);
-  }
-
-  public long getTimestamp() {
-    return this.timestamp;
-  }
-
-  public void updateTimestamp() {
-    this.timestamp = System.currentTimeMillis();
   }
 }

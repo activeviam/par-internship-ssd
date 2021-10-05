@@ -7,12 +7,14 @@ import java.nio.file.Path;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.function.Predicate;
 
 public class SwapMemoryAllocator extends AMemoryAllocatorOnFile {
 
     protected final VirtMemStorage storage;
     protected long swapCounter = 0;
     protected volatile int ongoingSwap = 0;
+    protected Predicate<ABlockStackAllocator> cold;
 
     public static final float GARBAGE_COLLECT_RATE = 0.8f;
 
@@ -20,6 +22,19 @@ public class SwapMemoryAllocator extends AMemoryAllocatorOnFile {
         super(dir);
         this.storage = new VirtMemStorage(size, blockSize, useHugePage);
         this.storage.init();
+        this.cold = new Predicate<>() {
+            private int MIN_USAGE_COUNT = 100;
+            @Override
+            public boolean test(ABlockStackAllocator blockAllocator) {
+                final var superblock = (SwapBlockAllocator)blockAllocator;
+                if (superblock.usages() < MIN_USAGE_COUNT) {
+                    superblock.release();
+                    return true;
+                } else {
+                    return false;
+                }
+            }
+        };
     }
 
     @Override
@@ -72,7 +87,7 @@ public class SwapMemoryAllocator extends AMemoryAllocatorOnFile {
                 synchronized (this.allocators) {
                     var it = this.allocators.entrySet().iterator();
                     while (it.hasNext() && this.storage.count > GARBAGE_COLLECT_RATE * this.storage.capacity) {
-                        ((BlockAllocatorManager) (it.next().getValue())).releaseCold();
+                        ((BlockAllocatorManager) (it.next().getValue())).remove();
                     }
                 }
                 this.swapCounter++;

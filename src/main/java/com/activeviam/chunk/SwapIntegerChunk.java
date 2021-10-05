@@ -7,11 +7,11 @@ import java.util.logging.Logger;
 
 import static com.activeviam.IMemoryAllocator.PAGE_SIZE;
 
-public class SwapDoubleChunk extends ASwapChunk<Double> implements DoubleChunk {
+public class SwapIntegerChunk extends ASwapChunk<Integer> implements IntegerChunk {
 
-    protected static final int ELEMENT_SIZE_ORDER = 3;
+    protected static final int ELEMENT_SIZE_ORDER = 2;
 
-    public SwapDoubleChunk(final SwapMemoryAllocator allocator, final int capacity) {
+    public SwapIntegerChunk(final SwapMemoryAllocator allocator, final int capacity) {
         super(allocator, capacity, computeBlockSize(capacity));
     }
 
@@ -28,14 +28,14 @@ public class SwapDoubleChunk extends ASwapChunk<Double> implements DoubleChunk {
     }
 
     @Override
-    public double readDouble(int position) {
+    public int readInt(int position) {
         assert 0 <= position && position < capacity();
 
         for (;;) {
             final var allocatorValue = this.header.getAllocatorValue();
             final var blockAllocator = (SwapBlockAllocator)allocatorValue.getMetadata();
 
-            double value = UNSAFE.getDouble(offset(position << ELEMENT_SIZE_ORDER));
+            int value = UNSAFE.getInt(offset(position << ELEMENT_SIZE_ORDER));
             if (blockAllocator.active()) {
                 return value;
             }
@@ -45,7 +45,7 @@ public class SwapDoubleChunk extends ASwapChunk<Double> implements DoubleChunk {
     }
 
     @Override
-    public void writeDouble(int position, double value) {
+    public void writeInt(int position, int value) {
         assert 0 <= position && position < capacity();
 
         for (;;) {
@@ -57,7 +57,7 @@ public class SwapDoubleChunk extends ASwapChunk<Double> implements DoubleChunk {
                 try {
                     if (blockAllocator.active()) {
                         allocatorValue.dirtyBlock();
-                        UNSAFE.putDouble(offset(position << ELEMENT_SIZE_ORDER), value);
+                        UNSAFE.putInt(offset(position << ELEMENT_SIZE_ORDER), value);
                         return;
                     }
                 } finally {
@@ -70,3 +70,4 @@ public class SwapDoubleChunk extends ASwapChunk<Double> implements DoubleChunk {
     }
 
 }
+

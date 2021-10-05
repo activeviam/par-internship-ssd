@@ -3,34 +3,46 @@ package com.activeviam.reference;
 import com.activeviam.IMemoryAllocator;
 import com.activeviam.chunk.ASwapChunk;
 import com.activeviam.platform.LinuxPlatform;
-import java.lang.invoke.MethodHandles;
-import java.lang.invoke.VarHandle;
-import java.util.Arrays;
+
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 public class SwapBlockAllocator extends ABlockStackAllocator {
 
     protected static final LinuxPlatform PLATFORM = LinuxPlatform.getInstance();
 
     protected final VirtMemStorage storage;
+    protected final ReadWriteLock rwlock;
 
-    protected ASwapChunk.Header[] owners;
-    protected VarHandle OWNERS = MethodHandles.arrayElementVarHandle(ASwapChunk.Header[].class);
-
-    protected volatile boolean isActive;
+    protected ASwapChunk.Header [] owners;
+    protected volatile boolean active;
+    protected int usages;
 
     public SwapBlockAllocator(final VirtMemStorage storage, final long size) {
         super(size, storage.size());
         this.storage = storage;
-        this.owners = new ASwapChunk.Header[this.capacity];
+        this.owners = new ASwapChunk.Header [this.capacity()];
+        this.rwlock = new ReentrantReadWriteLock();
     }
 
-    public boolean isActive() { return this.isActive; }
+    public int usages() {
+        final var usages = this.usages;
+        this.usages = 0;
+        return usages;
+    }
+
+    public boolean active() {
+        this.usages++;
+        return this.active;
+    }
 
     @Override
     protected long virtualAlloc(long size) {
         final var value = this.storage.allocate();
         if (value != null) {
-            this.isActive = true;
+            this.active = true;
+            this.usages = 0;
             return value.getBlockAddress();
         } else {
             return NULL_POINTER;
@@ -41,9 +53,7 @@ public class SwapBlockAllocator extends ABlockStackAllocator {
     protected void doAllocate(long ptr, long size) {}
 
     @Override
-    protected void doFree(long ptr, long size) {
-        OWNERS.setVolatile(owners, getPosition(ptr), null);
-    }
+    protected void doFree(long ptr, long size) { this.owners[getPosition(ptr)] = null; }
 
     /**
      * Acquires a write lock to block IO operations on SwapBlockAllocator and iterates over {@link #owners} to flush
@@ -56,21 +66,24 @@ public class SwapBlockAllocator extends ABlockStackAllocator {
     protected void doRelease(long ptr, long size) {
         try {
             this.rwlock.writeLock().lock();
-            for (int i = 0; i < this.capacity; i++) {
-                final var header = (ASwapChunk.Header)OWNERS.getVolatile(this.owners, i);
-                if (header != null) {
-                    final var value = header.getAllocatorValue();
-                    if (value.isDirtyBlock()) {
-                        PLATFORM.writeToFile(header.getFd(), value.getBlockAddress(), this.size);
+            for (ASwapChunk.Header owner : this.owners) {
+                if (owner != null) {
+                    final var av = owner.getAllocatorValue();
+                    if (av.isDirtyBlock()) {
+                        PLATFORM.writeToFile(owner.getFd(), av.getBlockAddress(), this.size);
                     }
-                    this.free(value);
+                    this.free(av);
                 }
             }
-            this.isActive = false;
+            this.active = false;
             this.storage.free(new IMemoryAllocator.ReturnValue(this.storage, ptr));
         } finally {
             this.rwlock.writeLock().unlock();
         }
+    }
+
+    public Lock readLock() {
+        return this.rwlock.readLock();
     }
 
     /**
@@ -78,22 +91,25 @@ public class SwapBlockAllocator extends ABlockStackAllocator {
      * call the SwapBlockAllocator may be already desactivated by {@link #release()} function.
      *
      * @param owner header of the chunk to register
-     * @return true if the chunk header has been registered, false otherwise.
      */
     public void registerOwner(ASwapChunk.Header owner) {
-        final int pos = getPosition(owner.getAllocatorValue().getBlockAddress());
-        OWNERS.setVolatile(this.owners, pos, owner);
+        this.rwlock.readLock().lock();
+        try {
+            this.owners[getPosition(owner.getAllocatorValue().getBlockAddress())] = owner;
+        } finally {
+            this.rwlock.readLock().unlock();
+        }
     }
 
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
         sb.append("Headers\n");
-        Arrays.stream(this.owners).forEach(header -> {
-            if (header != null) {
-                sb.append(header).append("\n");
+        for (ASwapChunk.Header owner : this.owners) {
+            if (owner != null) {
+                sb.append(owners).append("\n");
             }
-        });
+        }
         return sb.toString();
     }
 }

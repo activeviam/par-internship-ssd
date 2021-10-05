@@ -15,6 +15,8 @@ import java.nio.file.Path;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Phaser;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -38,6 +40,7 @@ public class TestSuperblockDoubleChunk implements SpecTestDoubleChunk {
 
         final int numThreads = 2;
         final List<Thread> threads = new LinkedList<>();
+        final CountDownLatch latch = new CountDownLatch(numThreads);
 
         for (int threadId = 0; threadId < numThreads; threadId++) {
 
@@ -45,10 +48,17 @@ public class TestSuperblockDoubleChunk implements SpecTestDoubleChunk {
 
             final Thread thread = new Thread(() -> {
 
-                final var chunk = new SwapDoubleChunk(this.allocator, 1 << (id + 9));
+                final var chunk = new SwapDoubleChunk(this.allocator, 1 << (id + 11));
 
                 for (int i = 0; i < chunk.capacity(); i++) {
                     chunk.writeDouble(i, -5.8 * id * i);
+                }
+
+                latch.countDown();
+                try {
+                    latch.await();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
                 }
 
                 for (int i = 0; i < chunk.capacity(); i++) {
@@ -57,7 +67,7 @@ public class TestSuperblockDoubleChunk implements SpecTestDoubleChunk {
                                 + "] expected = " + (-5.8 * id * i)
                                 + ", actual = " + chunk.readDouble(i)
                                 + ", dirty? " + chunk.header.getAllocatorValue().isDirtyBlock()
-                                + ", allocator " + ((SwapBlockAllocator)(chunk.header.getAllocatorValue().getMetadata())).isActive());
+                                + ", allocator " + ((SwapBlockAllocator)(chunk.header.getAllocatorValue().getMetadata())).active());
                     }
                 }
 
@@ -103,7 +113,7 @@ public class TestSuperblockDoubleChunk implements SpecTestDoubleChunk {
                                     + "] expected = " + (-5.8 * id * i)
                                     + ", actual = " + chunk.readDouble(i)
                                     + ", dirty? " + chunk.header.getAllocatorValue().isDirtyBlock()
-                                    + ", allocator " + ((SwapBlockAllocator)(chunk.header.getAllocatorValue().getMetadata())).isActive());
+                                    + ", allocator " + ((SwapBlockAllocator)(chunk.header.getAllocatorValue().getMetadata())).active());
                         }
                     }
 
@@ -132,7 +142,7 @@ public class TestSuperblockDoubleChunk implements SpecTestDoubleChunk {
     @BeforeEach
     void createAllocator() {
         final long hugePageSize = 1 << 21;
-        this.allocator = new SwapMemoryAllocator(tempDir, hugePageSize,  hugePageSize, false);
+        this.allocator = new SwapMemoryAllocator(tempDir, hugePageSize, hugePageSize, false);
     }
 
     @AfterEach
