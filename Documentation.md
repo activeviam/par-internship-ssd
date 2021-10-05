@@ -287,7 +287,7 @@ a "superblock" is more granular object that the whole memory storage
 controlled by `VirtMemStorage` yet less granular than elementary blocks
 controlled by `ReturnValue` objects:
 
-![](Untitled%20Diagram.png)
+![](MemoryOrganization.png)
 
 On the diagram, two-headed arrows between objects represent the identity, and
 one-headed arrows represent the memory pointers. As one may see,
