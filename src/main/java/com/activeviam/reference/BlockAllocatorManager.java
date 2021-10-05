@@ -207,29 +207,6 @@ public class BlockAllocatorManager implements IBlockAllocator {
   }
 
   public void removeIf(Predicate<? super ABlockStackAllocator> predicate) {
-
-      final var it = this.blocks.iterator();
-
-      while (it.hasNext()) {
-        final var blockAllocator = it.next();
-        blockAllocator.release();
-        it.remove();
-      }
-
-      //this.blocks.removeIf(predicate);
+    this.blocks.removeIf(predicate);
   }
-
-  public void remove() {
-
-    final var it = this.blocks.iterator();
-
-    while (it.hasNext()) {
-      final var blockAllocator = it.next();
-      blockAllocator.release();
-      it.remove();
-    }
-
-    //this.blocks.removeIf(predicate);
-  }
-
 }
