@@ -7,6 +7,7 @@
 
 package com.activeviam.vector;
 
+import com.activeviam.Type;
 import com.activeviam.iterator.IPrimitiveIterator;
 
 /**
@@ -16,6 +17,156 @@ import com.activeviam.iterator.IPrimitiveIterator;
  * @author ActiveViam
  */
 public interface IVector {
+
+	/**
+	 * Gets whether {@code null} is stored in a given row at a given position or not.
+	 *
+	 * @param position 0-based index in an array
+	 * @return {@code true} if the element stored at that position is {@code null}, {@code false} otherwise
+	 */
+	boolean isNull(int position);
+
+	/**
+	 * Reads a value at some index in an array.
+	 *
+	 * @param position 0-based index in an array
+	 * @return the data stored at that position in the array
+	 */
+	Object read(int position);
+
+	/**
+	 * Writes a piece of data at a position in the array.
+	 * <p>
+	 * For better performance, use the primitive type operations.
+	 *
+	 * @param position 0-based index in the array
+	 * @param value the value to write
+	 */
+	void write(int position, Object value);
+
+	/**
+	 * Reads a boolean primitive value from the array.
+	 * <p>
+	 * An exception is thrown if the value is not of the right type.
+	 *
+	 * @param position 0-based index in an array
+	 * @return boolean value
+	 */
+	boolean readBoolean(final int position);
+
+	/**
+	 * Reads an int primitive value from the array.
+	 * <p>
+	 * An exception is thrown if the value is not of the right type.
+	 *
+	 * @param position 0-based index in an array
+	 * @return int value
+	 */
+	int readInt(final int position);
+
+	/**
+	 * Reads a long primitive value from the array.
+	 * <p>
+	 * An exception is thrown if the value is not of the right type.
+	 *
+	 * @param position 0-based index in an array
+	 * @return long value
+	 */
+	long readLong(final int position);
+
+	/**
+	 * Reads a double primitive value from the array.
+	 * <p>
+	 * An exception is thrown if the value is not of the right type.
+	 *
+	 * @param position 0-based index in an array
+	 * @return double value
+	 */
+	double readDouble(final int position);
+
+	/**
+	 * Reads a float primitive value from the array.
+	 * <p>
+	 * An exception is thrown if the value is not of the right type.
+	 *
+	 * @param position 0-based index in an array
+	 * @return float value
+	 */
+	float readFloat(final int position);
+
+	/**
+	 * Writes a boolean primitive value in the array.
+	 *
+	 * @param position 0-based index in the array
+	 * @param value the value to write
+	 */
+	void writeBoolean(final int position, final boolean value);
+
+	/**
+	 * Writes an int primitive value in the array.
+	 *
+	 * @param position 0-based index in the array
+	 * @param value the value to write
+	 */
+	void writeInt(final int position, final int value);
+
+	/**
+	 * Writes a long primitive value in the array.
+	 *
+	 * @param position 0-based index in the array
+	 * @param value the value to write
+	 */
+	void writeLong(final int position, final long value);
+
+	/**
+	 * Writes a double primitive value in the array.
+	 *
+	 * @param position 0-based index in the array
+	 * @param value the value to write
+	 */
+	void writeDouble(final int position, final double value);
+
+	/**
+	 * Writes a float primitive value in the array.
+	 *
+	 * @param position 0-based index in the array
+	 * @param value the value to write
+	 */
+	void writeFloat(final int position, final float value);
+
+	// AGGREGATION SUPPORT
+
+	/**
+	 * Adds a int primitive value to an element of the array.
+	 *
+	 * @param position 0-based index in the array
+	 * @param addedValue the value to add
+	 */
+	void addLong(final int position, final long addedValue);
+
+	/**
+	 * Adds a long primitive value to an element of the array.
+	 *
+	 * @param position 0-based index in the array
+	 * @param addedValue the value to add
+	 */
+	void addInt(final int position, final int addedValue);
+
+	/**
+	 * Adds a double primitive value to an element of the array.
+	 *
+	 * @param position 0-based index in the array
+	 * @param addedValue the value to add
+	 */
+	void addDouble(final int position, final double addedValue);
+
+	/**
+	 * Adds a float primitive value to an element of the array.
+	 *
+	 * @param position 0-based index in the array
+	 * @param addedValue the value to add
+	 */
+	void addFloat(final int position, final float addedValue);
 
 	/**
 	 * Returns a restricted view of this vector.
@@ -77,11 +228,11 @@ public interface IVector {
 	int size();
 
 	/**
-	 * Returns the component type of this vector as a {@link Types type}, as in {@link Types}.TYPE_*.
+	 * Returns the component type of this vector as a {@link Type type}.
 	 *
 	 * @return the component type of this vector
 	 */
-	int getComponentType();
+	Type getComponentType();
 
 	/**
 	 * Transfers the first {@code dst.length} elements of this vector into the given array.

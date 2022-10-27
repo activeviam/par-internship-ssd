@@ -15,7 +15,7 @@ package com.activeviam.vector;
  *
  * @author ActiveViam
  */
-public interface ITransientVector extends IVector {
+public interface ITransientVector extends IReleasableVector {
 
 	/**
 	 * Sorts the content of this vector in place.
