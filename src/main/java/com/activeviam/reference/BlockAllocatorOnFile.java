@@ -1,6 +1,6 @@
 package com.activeviam.reference;
 
-import com.activeviam.MemoryAllocator;
+import com.activeviam.allocator.MemoryAllocator;
 import com.activeviam.platform.LinuxPlatform;
 import java.io.File;
 import java.io.IOException;

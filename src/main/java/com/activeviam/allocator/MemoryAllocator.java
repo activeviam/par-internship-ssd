@@ -5,7 +5,9 @@
  * reproduction or transfer of this material is strictly prohibited
  */
 
-package com.activeviam;
+package com.activeviam.allocator;
+
+import com.activeviam.UnsafeUtil;
 
 public interface MemoryAllocator {
 

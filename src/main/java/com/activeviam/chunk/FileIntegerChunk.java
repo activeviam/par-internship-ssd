@@ -7,7 +7,7 @@
 
 package com.activeviam.chunk;
 
-import com.activeviam.MemoryAllocator;
+import com.activeviam.allocator.MemoryAllocator;
 import com.activeviam.UnsafeUtil;
 import com.activeviam.reference.MemoryAllocatorOnFile;
 import java.util.BitSet;
