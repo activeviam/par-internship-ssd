@@ -7,7 +7,7 @@
 
 package com.activeviam.vector;
 
-import com.activeviam.Type;
+import com.activeviam.Types;
 import com.activeviam.heap.MaxHeapDouble;
 import com.activeviam.heap.MaxHeapDoubleWithIndices;
 import com.activeviam.heap.MinHeapDouble;
@@ -73,8 +73,8 @@ public class ArrayDoubleVector extends AArrayVector {
 	}
 
 	@Override
-	public Type getComponentType() {
-		return Type.DOUBLE;
+	public Types getComponentType() {
+		return Types.DOUBLE;
 	}
 
 	@Override

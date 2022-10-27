@@ -7,7 +7,7 @@
 
 package com.activeviam.block;
 
-import com.activeviam.Type;
+import com.activeviam.Types;
 import com.activeviam.iterator.IPrimitiveIterator;
 import com.activeviam.vector.IVector;
 import java.util.Arrays;
@@ -33,7 +33,7 @@ public interface IBlock {
 	 *
 	 * @return the component type of the vectors whose data can be stored in this block
 	 */
-	Type getComponentType();
+	Types getComponentType();
 
 	/**
 	 * Prevents the block from being destroyed.

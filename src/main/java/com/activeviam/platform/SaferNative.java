@@ -38,7 +38,7 @@ public class SaferNative {
    * loaded via this method may be found in <a
    * href="NativeLibrary.html#library_search_paths">several locations</a>.
    *
-   * @param <T> Type of expected wrapper
+   * @param <T> Types of expected wrapper
    * @param name Library base name
    * @param interfaceClass The implementation wrapper interface
    * @return an instance of the requested interface, mapped to the indicated native library.
@@ -61,7 +61,7 @@ public class SaferNative {
    * loaded via this method may be found in <a
    * href="NativeLibrary.html#library_search_paths">several locations</a>.
    *
-   * @param <T> Type of expected wrapper
+   * @param <T> Types of expected wrapper
    * @param name Library base name
    * @param interfaceClass The implementation wrapper interface
    * @param options Map of library options

@@ -7,9 +7,10 @@
 
 package com.activeviam.chunk;
 
+import com.activeviam.vector.IVector;
 import java.util.BitSet;
 
-public interface IntegerChunk extends Chunk<Integer> {
+public interface IntegerChunk extends IChunk<Integer> {
 
 	@Override
 	default double readDouble(int position) {
@@ -17,8 +18,18 @@ public interface IntegerChunk extends Chunk<Integer> {
 	}
 
 	@Override
+	default IVector readVector(int position) {
+		throw new UnsupportedOperationException("Cannot read vector as integer");
+	}
+
+	@Override
 	default void writeDouble(int position, double value) {
 		throw new UnsupportedOperationException("Cannot write double into ints");
+	}
+
+	@Override
+	default void write(int position, Object value) {
+		writeInt(position, (Integer) value);
 	}
 
 	/**

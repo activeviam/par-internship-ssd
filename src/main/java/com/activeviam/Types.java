@@ -10,9 +10,9 @@ package com.activeviam;
 /**
  * @author ActiveViam
  */
-public enum Type {
+public enum Types {
 
 	DOUBLE,
-	INTEGER;
+	INTEGER
 
 }

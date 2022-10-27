@@ -41,7 +41,7 @@ public interface SpecTestIntegerChunk {
           for (int position = 0; position < values.length; position += 1) {
             assertions
                 .assertThat(chunk.readInt(position))
-                .as("Chunk[%d]", position)
+                .as("IChunk[%d]", position)
                 .isEqualTo(values[position]);
           }
         });

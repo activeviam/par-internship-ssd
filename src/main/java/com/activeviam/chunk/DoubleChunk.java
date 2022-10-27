@@ -7,7 +7,9 @@
 
 package com.activeviam.chunk;
 
-public interface DoubleChunk extends Chunk<Double> {
+import com.activeviam.vector.IVector;
+
+public interface DoubleChunk extends IChunk<Double> {
 
   @Override
   default int readInt(int position) {
@@ -15,7 +17,17 @@ public interface DoubleChunk extends Chunk<Double> {
   }
 
   @Override
+  default IVector readVector(int position) {
+    throw new UnsupportedOperationException("Cannot read double as vector");
+  }
+
+  @Override
   default void writeInt(int position, int value) {
     writeDouble(position, value);
+  }
+
+  @Override
+  default void write(int position, Object value) {
+    writeDouble(position, (Double) value);
   }
 }

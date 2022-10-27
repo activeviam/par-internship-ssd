@@ -7,7 +7,7 @@
 
 package com.activeviam.vector;
 
-import com.activeviam.Type;
+import com.activeviam.Types;
 import com.activeviam.iterator.IPrimitiveIterator;
 
 /**
@@ -228,11 +228,11 @@ public interface IVector {
 	int size();
 
 	/**
-	 * Returns the component type of this vector as a {@link Type type}.
+	 * Returns the component type of this vector as a {@link Types type}.
 	 *
 	 * @return the component type of this vector
 	 */
-	Type getComponentType();
+	Types getComponentType();
 
 	/**
 	 * Transfers the first {@code dst.length} elements of this vector into the given array.

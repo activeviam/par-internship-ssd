@@ -32,6 +32,6 @@ public class TestFileDoubleChunk implements SpecTestDoubleChunk {
 
   @Override
   public DoubleChunk createChunk(int capacity) {
-    return new FileDoubleChunk(this.allocator, capacity);
+    return new DirectDoubleChunk(this.allocator, capacity);
   }
 }

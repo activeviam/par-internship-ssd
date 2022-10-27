@@ -33,7 +33,7 @@ public class ChunkSet implements IChunkSet {
 	public ChunkSet(int attributes, int values, int chunkSize, IChunkAllocator allocator) {
 		this.attributes = new IntegerChunk[attributes];
 		for (int i = 0; i < attributes; i++) {
-			this.attributes[i] = allocator.allocateIntergerChunk(chunkSize);
+			this.attributes[i] = allocator.allocateIntegerChunk(chunkSize);
 		}
 		this.values = new DoubleChunk[values];
 		for (int i = 0; i < values; i++) {

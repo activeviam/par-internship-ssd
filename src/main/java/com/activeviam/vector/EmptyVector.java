@@ -7,7 +7,7 @@
 
 package com.activeviam.vector;
 
-import com.activeviam.Type;
+import com.activeviam.Types;
 import com.activeviam.iterator.IPrimitiveIterator;
 import java.util.EnumMap;
 import java.util.NoSuchElementException;
@@ -22,39 +22,39 @@ public class EmptyVector implements ITransientVector, Cloneable, IPrimitiveItera
 	/**
 	 * The map component class -> singleton {@link EmptyVector} instance.
 	 */
-	public static final EnumMap<Type, EmptyVector> EMPTY_VECTORS = new EnumMap<>(Type.class);
+	public static final EnumMap<Types, EmptyVector> EMPTY_VECTORS = new EnumMap<>(Types.class);
 
 	static {
 		// Init the map with usual types
-		emptyVector(Type.DOUBLE);
-		emptyVector(Type.INTEGER);
+		emptyVector(Types.DOUBLE);
+		emptyVector(Types.INTEGER);
 	}
 
 	/** The underlying component type of this vector. */
-	public final Type componentType;
+	public final Types componentTypes;
 
 	/**
 	 * Creates the singleton empty vector, with the given type.
 	 *
-	 * @param componentType the component type of the empty vector
+	 * @param componentTypes the component type of the empty vector
 	 * @return the singleton empty vector
 	 */
-	public static ITransientVector emptyVector(final Type componentType) {
-		EmptyVector result = EMPTY_VECTORS.get(componentType);
+	public static ITransientVector emptyVector(final Types componentTypes) {
+		EmptyVector result = EMPTY_VECTORS.get(componentTypes);
 		if (result == null) {
-			EMPTY_VECTORS.putIfAbsent(componentType, new EmptyVector(componentType));
-			result = EMPTY_VECTORS.get(componentType);
+			EMPTY_VECTORS.putIfAbsent(componentTypes, new EmptyVector(componentTypes));
+			result = EMPTY_VECTORS.get(componentTypes);
 		}
 		return result;
 	}
 
-	private EmptyVector(final Type componentType) {
-		this.componentType = componentType;
+	private EmptyVector(final Types componentTypes) {
+		this.componentTypes = componentTypes;
 	}
 
 	@Override
-	public Type getComponentType() {
-		return this.componentType;
+	public Types getComponentType() {
+		return this.componentTypes;
 	}
 
 	@Override
@@ -104,7 +104,7 @@ public class EmptyVector implements ITransientVector, Cloneable, IPrimitiveItera
 			return false;
 		}
 		final IVector v = (IVector) obj;
-		return v.size() == 0 && v.getComponentType() == componentType;
+		return v.size() == 0 && v.getComponentType() == componentTypes;
 	}
 
 	@Override

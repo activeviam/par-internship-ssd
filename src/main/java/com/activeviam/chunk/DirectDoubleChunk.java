@@ -9,15 +9,16 @@ package com.activeviam.chunk;
 
 import com.activeviam.allocator.MemoryAllocator;
 import com.activeviam.UnsafeUtil;
+import com.activeviam.allocator.UnsafeNativeMemoryAllocator;
 import com.activeviam.reference.MemoryAllocatorOnFile;
 import java.util.logging.Logger;
 
-public class FileDoubleChunk extends AbstractFileChunk<Double> implements DoubleChunk {
+public class DirectDoubleChunk extends AbstractDirectChunk<Double> implements DoubleChunk {
 
   /** The order of the size in bytes of an element. */
   private static final int ELEMENT_SIZE_ORDER = 3;
 
-  public FileDoubleChunk(final MemoryAllocatorOnFile allocator, final int capacity) {
+  public DirectDoubleChunk(final UnsafeNativeMemoryAllocator allocator, final int capacity) {
     super(allocator, capacity, computeBlockSize(capacity));
   }
 

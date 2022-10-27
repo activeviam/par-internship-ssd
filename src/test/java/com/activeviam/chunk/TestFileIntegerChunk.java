@@ -32,6 +32,6 @@ public class TestFileIntegerChunk implements SpecTestIntegerChunk {
 
   @Override
   public IntegerChunk createChunk(int capacity) {
-    return new FileIntegerChunk(this.allocator, capacity);
+    return new DirectIntegerChunk(this.allocator, capacity);
   }
 }

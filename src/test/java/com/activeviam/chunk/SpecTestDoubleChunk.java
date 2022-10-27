@@ -41,7 +41,7 @@ public interface SpecTestDoubleChunk {
           for (int position = 0; position < values.length; position += 1) {
             assertions
                 .assertThat(chunk.readDouble(position))
-                .as("Chunk[%d]", position)
+                .as("IChunk[%d]", position)
                 .isEqualTo(values[position]);
           }
         });

@@ -27,7 +27,7 @@ public class ColumnarTable implements IWritableTable {
 	 */
 	protected final int valueCount;
 
-	/** Chunk allocator */
+	/** IChunk allocator */
 	protected final IChunkAllocator allocator;
 
 	/** Data chunks */
@@ -38,7 +38,7 @@ public class ColumnarTable implements IWritableTable {
 
 	/** The size of the chunks */
 	protected final int chunkSize;
-	/** Chunk order, at the power of 2 it is the chunk size */
+	/** IChunk order, at the power of 2 it is the chunk size */
 	protected final int chunkOrder;
 	/** Mask to extract positions within chunks */
 	protected final int chunkMask;
