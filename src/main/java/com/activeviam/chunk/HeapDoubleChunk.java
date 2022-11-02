@@ -30,8 +30,4 @@ public class HeapDoubleChunk implements DoubleChunk {
     this.array[position] = value;
   }
 
-  @Override
-  public Runnable destroy() {
-    return EMPTY_DESTORYER;
-  }
 }

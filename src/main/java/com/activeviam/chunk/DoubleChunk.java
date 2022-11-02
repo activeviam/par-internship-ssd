@@ -12,6 +12,16 @@ import com.activeviam.vector.IVector;
 public interface DoubleChunk extends IChunk {
 
   @Override
+  default boolean isNull(int position) {
+    return false;
+  }
+
+  @Override
+  default Object read(int position) {
+    return readDouble(position);
+  }
+
+  @Override
   default int readInt(int position) {
     throw new UnsupportedOperationException("Cannot read double as int.");
   }

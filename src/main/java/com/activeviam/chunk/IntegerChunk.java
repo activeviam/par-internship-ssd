@@ -13,6 +13,16 @@ import java.util.BitSet;
 public interface IntegerChunk extends IChunk {
 
 	@Override
+	default boolean isNull(int position) {
+		return false;
+	}
+
+	@Override
+	default Object read(int position) {
+		return readInt(position);
+	}
+
+	@Override
 	default double readDouble(int position) {
 		return readInt(position);
 	}

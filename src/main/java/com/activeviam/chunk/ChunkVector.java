@@ -11,6 +11,7 @@ import com.activeviam.Types;
 import com.activeviam.allocator.AllocationType;
 import com.activeviam.vector.IVector;
 import com.activeviam.vector.VectorFinalizer;
+import java.io.Closeable;
 import java.lang.ref.WeakReference;
 import java.util.Arrays;
 
@@ -19,7 +20,7 @@ import java.util.Arrays;
  *
  * @author ActiveViam
  */
-public class ChunkVector implements IVectorChunk {
+public class ChunkVector implements IVectorChunk, Closeable {
 
 	private final transient IChunkAllocator allocator;
 	private final IVector[] vectors;
@@ -82,11 +83,6 @@ public class ChunkVector implements IVectorChunk {
 		} else {
 			writeNotVector(position, value);
 		}
-	}
-
-	@Override
-	public Runnable destroy() {
-		return this.destroyAction;
 	}
 
 	/**
@@ -167,4 +163,8 @@ public class ChunkVector implements IVectorChunk {
 		return this.type;
 	}
 
+	@Override
+	public void close() {
+		this.destroyAction.run();
+	}
 }
