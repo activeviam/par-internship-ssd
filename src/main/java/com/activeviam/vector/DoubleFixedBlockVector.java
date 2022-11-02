@@ -10,6 +10,7 @@ package com.activeviam.vector;
 import com.activeviam.Types;
 import com.activeviam.allocator.AllocationType;
 import com.activeviam.block.IBlock;
+import com.activeviam.chunk.ADirectVectorBlock;
 import java.util.Arrays;
 
 /**

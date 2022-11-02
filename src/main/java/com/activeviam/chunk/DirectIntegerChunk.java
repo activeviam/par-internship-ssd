@@ -13,7 +13,7 @@ import com.activeviam.allocator.UnsafeNativeMemoryAllocator;
 import java.util.BitSet;
 import java.util.logging.Logger;
 
-public class DirectIntegerChunk extends AbstractDirectChunk<Integer> implements IntegerChunk {
+public class DirectIntegerChunk extends AbstractDirectChunk implements IntegerChunk {
 
 
 	/** Unsafe provider. */

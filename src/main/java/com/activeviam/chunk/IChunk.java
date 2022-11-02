@@ -7,18 +7,15 @@
 
 package com.activeviam.chunk;
 
-import com.activeviam.vector.IVector;
-
 /**
  * A chunk of data within a column. The column delegates read and write operations to its chunks.
  * <p>
  * The implementation of a chunk must allow multiple concurrent readers to read the data while one single writer
  * writes in the chunk. Multiple concurrent writers is not by default supported by chunk implementations.
  *
- * @param <K> the type of data stored by the chunk
  * @author ActiveViam
  */
-public interface IChunk<K> {
+public interface IChunk extends IArrayReader, IArrayWriter {
 
 	Runnable EMPTY_DESTORYER = () -> {};
 
@@ -56,14 +53,6 @@ public interface IChunk<K> {
 	 * @param position 0-based index in an array
 	 */
 	void writeDouble(int position, double value);
-
-	/**
-	 * Returns the data stored at that position in the chunk.
-	 *
-	 * @param position the position in the chunk at which to read
-	 * @return the data stored at that position in the chunk
-	 */
-	IVector readVector(int position);
 
 	/**
 	 * Writes a piece of data at a position in the array.

@@ -76,7 +76,7 @@ public class DirectMemoryAllocator implements IChunkAllocator {
 			if (length == 0) {
 				return EmptyVector.emptyVector(getComponentType());
 			}
-			final var block = allocateBlock();
+			final var block = allocateBlock(length);
 			// we always start the allocation at the start of the block
 			final IVector vector = createVector(block, length);
 			block.acquire();
@@ -98,9 +98,10 @@ public class DirectMemoryAllocator implements IChunkAllocator {
 		 * This method also decrements the reference count of the given {@code lastBlock} making it as destroyable if
 		 * all vectors stored in it are all dead.
 		 *
+		 * @param capacity the block capacity, in number of components
 		 * @return the newly allocated block
 		 */
-		protected abstract B allocateBlock();
+		protected abstract B allocateBlock(int capacity);
 
 		@Override
 		public IVector copy(IVector toCopy) {
@@ -114,34 +115,11 @@ public class DirectMemoryAllocator implements IChunkAllocator {
 	}
 
 	/**
-	 * An implementation of an {@link IVectorAllocator} that allocates off-heap vectors of ints via Unsafe.
-	 *
-	 * @author ActiveViam
-	 */
-	public static class DirectIntegerVectorAllocator extends ABlockVectorAllocator implements IVectorAllocator {
-
-		@Override
-		public void reallocateVector(IVector vector) {
-
-		}
-
-		@Override
-		public IVector copy(IVector toCopy) {
-			return null;
-		}
-
-		@Override
-		public Types getComponentType() {
-			return null;
-		}
-	}
-
-	/**
 	 * An implementation of an {@link IVectorAllocator} that allocates off-heap vectors of doubles via Unsafe.
 	 *
 	 * @author ActiveViam
 	 */
-	public class DirectDoubleVectorAllocator extends ABlockVectorAllocator implements IVectorAllocator {
+	public class DirectDoubleVectorAllocator extends ABlockVectorAllocator<DirectDoubleVectorBlock> implements IVectorAllocator {
 
 		@Override
 		public void reallocateVector(IVector vector) {
@@ -154,13 +132,13 @@ public class DirectMemoryAllocator implements IChunkAllocator {
 		}
 
 		@Override
-		protected AFixedBlockVector createVector(IBlock block, int length) {
+		protected AFixedBlockVector createVector(DirectDoubleVectorBlock block, int length) {
 			return new DoubleFixedBlockVector(block, 0, length);
 		}
 
 		@Override
-		protected IBlock allocateBlock() {
-			return new DirectDoubleVectorBlock(DirectMemoryAllocator.this.allocator);
+		protected DirectDoubleVectorBlock allocateBlock(int capacity) {
+			return new DirectDoubleVectorBlock(DirectMemoryAllocator.this.allocator, capacity);
 		}
 	}
 }

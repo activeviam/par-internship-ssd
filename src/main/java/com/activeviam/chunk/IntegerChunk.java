@@ -10,7 +10,7 @@ package com.activeviam.chunk;
 import com.activeviam.vector.IVector;
 import java.util.BitSet;
 
-public interface IntegerChunk extends IChunk<Integer> {
+public interface IntegerChunk extends IChunk {
 
 	@Override
 	default double readDouble(int position) {

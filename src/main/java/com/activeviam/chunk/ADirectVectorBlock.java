@@ -8,6 +8,7 @@
 package com.activeviam.chunk;
 
 import com.activeviam.Types;
+import com.activeviam.UnsafeUtil;
 import com.activeviam.allocator.AllocationType;
 import com.activeviam.allocator.MemoryAllocator;
 import com.activeviam.block.IBlock;
@@ -18,8 +19,9 @@ import java.util.concurrent.atomic.AtomicLong;
  *
  * @author ActiveViam
  */
-public abstract class ADirectVectorBlock<K> extends AbstractDirectChunk<K> implements IVectorChunk, IBlock {
+public abstract class ADirectVectorBlock extends AbstractDirectChunk implements IBlock {
 
+	protected static final sun.misc.Unsafe UNSAFE = UnsafeUtil.getUnsafe();
 	private final Types type;
 
 	/**

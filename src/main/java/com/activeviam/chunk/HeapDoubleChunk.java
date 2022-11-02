@@ -29,4 +29,9 @@ public class HeapDoubleChunk implements DoubleChunk {
   public void writeDouble(int position, double value) {
     this.array[position] = value;
   }
+
+  @Override
+  public Runnable destroy() {
+    return EMPTY_DESTORYER;
+  }
 }

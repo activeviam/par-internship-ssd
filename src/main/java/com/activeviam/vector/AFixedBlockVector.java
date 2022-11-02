@@ -9,6 +9,7 @@ package com.activeviam.vector;
 
 import com.activeviam.UnsafeUtil;
 import com.activeviam.block.IBlock;
+import com.activeviam.chunk.ADirectVectorBlock;
 import com.activeviam.iterator.IPrimitiveIterator;
 import com.activeviam.reference.TombStoneBlock;
 

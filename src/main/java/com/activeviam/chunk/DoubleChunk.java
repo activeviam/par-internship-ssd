@@ -9,7 +9,7 @@ package com.activeviam.chunk;
 
 import com.activeviam.vector.IVector;
 
-public interface DoubleChunk extends IChunk<Double> {
+public interface DoubleChunk extends IChunk {
 
   @Override
   default int readInt(int position) {

@@ -46,4 +46,8 @@ public class HeapIntegerChunk implements IntegerChunk {
 		return result;
 	}
 
+	@Override
+	public Runnable destroy() {
+		return EMPTY_DESTORYER;
+	}
 }
