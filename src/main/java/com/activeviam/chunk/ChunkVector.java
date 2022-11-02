@@ -9,7 +9,6 @@ package com.activeviam.chunk;
 
 import com.activeviam.Types;
 import com.activeviam.allocator.AllocationType;
-import com.activeviam.vector.IReleasableVector;
 import com.activeviam.vector.IVector;
 import com.activeviam.vector.VectorFinalizer;
 import java.lang.ref.WeakReference;
@@ -45,32 +44,8 @@ public class ChunkVector implements IVectorChunk {
 		}
 	}
 
-	/**
-	 * Creates a destroy action for non-transient chunks.
-	 * <p>
-	 * This destroyer is in charge of both cleaning the {@link #vectors} and releasing references for all hold
-	 * vectors.
-	 * <p>
-	 * This destroyer must be used when using off-heap memory. For transient chunks, it
-	 * relies only on {@link #transientDestroyer()}.
-	 *
-	 * @param objects list of vectors to clean
-	 * @return a runnable action performing a clean destroy of a chunk objects
-	 */
 	private static Runnable directDestroyer(final Object[] objects) {
-		/*
-		 * This method is static so that each new Runnable does not capture "this". This was initially a source of
-		 * memory leak.
-		 */
-		return () -> {
-			for (final Object vector : objects) {
-				if (vector != null) {
-					((IReleasableVector) vector).releaseReference();
-				}
-			}
-
-			Arrays.fill(objects, null);
-		};
+		return () -> Arrays.fill(objects, null);
 	}
 
 	static Runnable transientDestroyer(final ChunkVector chunk) {
@@ -87,12 +62,17 @@ public class ChunkVector implements IVectorChunk {
 
 	@Override
 	public int capacity() {
-		return 0;
+		return this.vectors.length;
 	}
 
 	@Override
-	public IVector readVector(int position) {
-		return null;
+	public boolean isNull(int position) {
+		return this.vectors[position] == null;
+	}
+
+	@Override
+	public Object read(int position) {
+		return this.vectors[position];
 	}
 
 	@Override
@@ -132,15 +112,6 @@ public class ChunkVector implements IVectorChunk {
 					// reallocate on-heap vectors to direct memory if the chunk is off-heap
 					vectorToWrite = cloneVector(vectorToWrite);
 				}
-				// Increase the reference counter of the new value
-				// We don't check with instanceof here because we assume that all vectors should
-				// implement IReleasableVector, including custom wrapper vectors
-				((IReleasableVector) vectorToWrite).acquireReference();
-			}
-			final IVector oldValue = readVector(position);
-			if (oldValue != null) {
-				// Decrease the reference counter of the old value
-				((IReleasableVector) oldValue).releaseReference();
 			}
 		}
 		this.vectors[position] = vectorToWrite;

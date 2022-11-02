@@ -64,16 +64,6 @@ public class EmptyVector implements ITransientVector, Cloneable, IPrimitiveItera
 	}
 
 	@Override
-	public void acquireReference() {
-		/* Do nothing for this kind of vector */
-	}
-
-	@Override
-	public void releaseReference() {
-		/* Do nothing for this kind of vector */
-	}
-
-	@Override
 	public IVector cloneOnHeap() {
 		return this;
 	}

@@ -23,11 +23,6 @@ public class DirectDoubleVectorBlock extends ADirectVectorBlock {
 	public DirectDoubleVectorBlock(final MemoryAllocator allocator, final int capacity) {
 		super(allocator, capacity, Types.DOUBLE);
 	}
-	
-	@Override
-	public Types getComponentType() {
-		return Types.DOUBLE;
-	}
 
 	@Override
 	public void transfer(final int position, final double[] dest) {

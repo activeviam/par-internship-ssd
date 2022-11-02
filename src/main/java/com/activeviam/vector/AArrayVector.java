@@ -24,26 +24,6 @@ public abstract class AArrayVector extends AVector implements IBlock, ITransient
 	}
 
 	@Override
-	public void acquire() {
-		/* Do nothing for array-based vector */
-	}
-
-	@Override
-	public void release(final int v) {
-		/* Do nothing for array-based vector */
-	}
-
-	@Override
-	public void acquireReference() {
-		/* Do nothing for array-based vector */
-	}
-
-	@Override
-	public void releaseReference() {
-		/* Do nothing for array-based vector */
-	}
-
-	@Override
 	public void transfer(final int position, final double[] dest) {
 		throw new UnsupportedOperationException(
 				"This method is not implemented for the vector " + getClass().getName());

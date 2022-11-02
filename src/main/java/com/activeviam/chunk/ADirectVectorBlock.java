@@ -1,5 +1,5 @@
 /*
- * (C) ActiveViam 2014-2021
+ * (C) ActiveViam 2022
  * ALL RIGHTS RESERVED. This material is the CONFIDENTIAL and PROPRIETARY
  * property of ActiveViam. Any unauthorized use,
  * reproduction or transfer of this material is strictly prohibited
@@ -12,7 +12,6 @@ import com.activeviam.UnsafeUtil;
 import com.activeviam.allocator.AllocationType;
 import com.activeviam.allocator.MemoryAllocator;
 import com.activeviam.block.IBlock;
-import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * A block that can store vectors using direct memory allocated an {@link MemoryAllocator}.
@@ -23,19 +22,6 @@ public abstract class ADirectVectorBlock extends AbstractDirectChunk implements 
 
 	protected static final sun.misc.Unsafe UNSAFE = UnsafeUtil.getUnsafe();
 	private final Types type;
-
-	/**
-	 * Counts the number of calls {@link #acquire()} to prevent the block from being destroyed. If the counter
-	 * reaches zeros, the block automatically triggers its destruction.
-	 */
-	protected AtomicLong counter = new AtomicLong();
-
-	/**
-	 * Keeps track of the number of components that have been freed.
-	 * <p>
-	 * This number starts at 0 when the block is created, and increases as calls to {@link #release(int)} are made.
-	 */
-	protected AtomicLong numberComponentsFreed = new AtomicLong();
 
 	/**
 	 * Constructor.
@@ -50,7 +36,7 @@ public abstract class ADirectVectorBlock extends AbstractDirectChunk implements 
 	 * Returns the size of the block in bytes for the given allocation settings.
 	 *
 	 * @param type     the content type
-	 * @param capacity
+	 * @param capacity the block capacity in terms of number of components
 	 * @return the block size, in bytes
 	 */
 	static int getBlockSizeInBytes(final Types type, int capacity) {
@@ -74,37 +60,6 @@ public abstract class ADirectVectorBlock extends AbstractDirectChunk implements 
 		return this.ptr;
 	}
 
-	/**
-	 * The number of references to this block, i.e. the number of vector instances that hold this block.
-	 *
-	 * @return the number of references to this block
-	 */
-	public long getReferenceCount() {
-		return counter.get();
-	}
-
-	@Override
-	public void acquire() {
-		final long next = counter.incrementAndGet();
-		if (next < 0) {
-			throw new RuntimeException(
-					"The number of vectors in the block is bigger than " + Long.MAX_VALUE + "(" + next + ")");
-		}
-	}
-
-	@Override
-	public void release(final int componentsCount) {
-//		final long next = counter.decrementAndGet();
-//		numberComponentsFreed.addAndGet(componentsCount);
-//		// This block is not held by any chunk so it can be destroyed
-//		if (next == 0) {
-//			// Register the block destroyer to ActiveCollector
-//			ActiveCollector.INSTANCE.register(destroy());
-//		} else if (next < 0) {
-//			throw new IllegalStateException("Releasing a block that is never acquired! " + next + " " + this);
-//		}
-	}
-
 	/////////////////////////////////////////////////////////////////////////////////////
 	// Unused methods from ADirectChunk
 	/////////////////////////////////////////////////////////////////////////////////////
@@ -117,6 +72,11 @@ public abstract class ADirectVectorBlock extends AbstractDirectChunk implements 
 	@Override
 	public boolean isNull(final int position) {
 		throw new UnsupportedOperationException();
+	}
+
+	@Override
+	public Types getComponentType() {
+		return this.type;
 	}
 
 	@Override

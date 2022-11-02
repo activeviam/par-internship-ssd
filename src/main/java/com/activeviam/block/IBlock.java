@@ -39,27 +39,6 @@ public interface IBlock extends IArrayReader, IArrayWriter {
 	Types getComponentType();
 
 	/**
-	 * Prevents the block from being destroyed.
-	 * <p>
-	 * Should be called when a vector is allocated on this block. When the vector is marked as dead,
-	 * {@link #release(int)} should be called to make it possible for the block to be destroyed when no living
-	 * vector is on the block.
-	 */
-	// We don't name the method acquireReference because it conflicts with another method in the
-	// IReleasableVector and ArrayVector implements both IBlock and IReleasableVector
-	void acquire();
-
-	/**
-	 * Called when a vector is marked as dead to make it possible for the block to be destroyed when no living
-	 * vector is on the block.
-	 *
-	 * @param componentsCount the number of vector components released
-	 */
-	// We don't name the method releaseReference because it conflicts with another method in the
-	// IReleasableVector and ArrayVector implements both IBlock and IReleasableVector
-	void release(int componentsCount);
-
-	/**
 	 * Transfers the content of the block into the given array.
 	 *
 	 * @param position the position at which to start

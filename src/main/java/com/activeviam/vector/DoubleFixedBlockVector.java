@@ -1,5 +1,5 @@
 /*
- * (C) ActiveViam 2014-2021
+ * (C) ActiveViam 2022
  * ALL RIGHTS RESERVED. This material is the CONFIDENTIAL and PROPRIETARY
  * property of ActiveViam. Any unauthorized use,
  * reproduction or transfer of this material is strictly prohibited
@@ -56,8 +56,8 @@ public class DoubleFixedBlockVector extends AFixedBlockVector {
 		final IBlock rightBlock = ((DoubleFixedBlockVector) vector).block;
 		final int rghtLen = vector.size();
 		final IBlock leftBlock = this.block;
-		long rghtPos = getPos(rightBlock, 3);
-		long lftPos = getPos(leftBlock, 3);
+		long rghtPos = getPos((ADirectVectorBlock) rightBlock, 3);
+		long lftPos = getPos((ADirectVectorBlock) leftBlock, 3);
 		final long maxPos = getMaxPos(rghtPos, rghtLen, 3);
 		final long maxUnroll = getMaxUnroll(rghtPos, rghtLen, 3, 32);
 		for (; rghtPos < maxUnroll; rghtPos += 32, lftPos += 32) {

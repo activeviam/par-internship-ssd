@@ -78,9 +78,7 @@ public class DirectMemoryAllocator implements IChunkAllocator {
 			}
 			final var block = allocateBlock(length);
 			// we always start the allocation at the start of the block
-			final IVector vector = createVector(block, length);
-			block.acquire();
-			return vector;
+			return createVector(block, length);
 		}
 
 		/**
@@ -128,7 +126,7 @@ public class DirectMemoryAllocator implements IChunkAllocator {
 
 		@Override
 		public Types getComponentType() {
-			return null;
+			return Types.DOUBLE;
 		}
 
 		@Override

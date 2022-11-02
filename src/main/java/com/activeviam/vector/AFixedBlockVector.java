@@ -11,7 +11,6 @@ import com.activeviam.UnsafeUtil;
 import com.activeviam.block.IBlock;
 import com.activeviam.chunk.ADirectVectorBlock;
 import com.activeviam.iterator.IPrimitiveIterator;
-import com.activeviam.reference.TombStoneBlock;
 
 /**
  * Implementation of a vector that is based on blocks to retrieve its underlying data.
@@ -22,12 +21,10 @@ public abstract class AFixedBlockVector extends AVector {
 
 	/** Unsafe provider. */
 	protected static final sun.misc.Unsafe UNSAFE = UnsafeUtil.getUnsafe();
-	/** Offset of the refCount field for CAS. */
-	protected static final long REF_COUNT_FIELD_OFFSET = UnsafeUtil.getFieldOffset(AFixedBlockVector.class, "refCount");
 
 	/**
 	 * Counter of reference to this vector (i.e. the number of chunks it is written on). If the counter reaches
-	 * zero, this vector is considered as dead, it will drop the acquire it has taken on its own block at the
+	 * zero, this vector is considered as dead, it will drop to acquire it has taken on its own block at the
 	 * allocation time.
 	 */
 	protected volatile int refCount;
@@ -47,33 +44,6 @@ public abstract class AFixedBlockVector extends AVector {
 		this.block = block;
 		this.position = position;
 		this.length = length;
-	}
-
-	@Override
-	public void acquireReference() {
-		// Do CAS because a vector can be concurrently written on multiple chunks
-		UnsafeUtil.getAndAddInt(this, REF_COUNT_FIELD_OFFSET, 1);
-	}
-
-	@Override
-	public void releaseReference() {
-		// Do CAS because a vector can be concurrently removed on multiple chunks
-		final int prev = UnsafeUtil.getAndAddInt(this, REF_COUNT_FIELD_OFFSET, -1);
-		final int next = prev - 1;
-		// This vector is not on any chunk, so it can be destroyed
-		if (next == 0) {
-			final IBlock oldBlock;
-			// When running compression we are not necessarily in the same thread as the ones calling collect().
-			// Whence the need for synchronization.
-			synchronized (this) {
-				oldBlock = block;
-				this.block = TombStoneBlock.INSTANCE;
-			}
-			assert oldBlock != TombStoneBlock.INSTANCE : "Releasing an already released vector!";
-			oldBlock.release(size());
-		} else if (next < 0) {
-			throw new IllegalStateException("Releasing a vector that is never acquired!");
-		}
 	}
 
 	@Override
