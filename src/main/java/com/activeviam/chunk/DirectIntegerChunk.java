@@ -9,7 +9,6 @@ package com.activeviam.chunk;
 
 import com.activeviam.UnsafeUtil;
 import com.activeviam.allocator.MemoryAllocator;
-import com.activeviam.allocator.UnsafeNativeMemoryAllocator;
 import java.util.BitSet;
 import java.util.logging.Logger;
 
@@ -22,7 +21,7 @@ public class DirectIntegerChunk extends AbstractDirectChunk implements IntegerCh
 	/** The order of the size in bytes of an element. */
 	private static final int ELEMENT_SIZE_ORDER = 2;
 
-	public DirectIntegerChunk(final UnsafeNativeMemoryAllocator allocator, final int capacity) {
+	public DirectIntegerChunk(final MemoryAllocator allocator, final int capacity) {
 		super(allocator, capacity, computeBlockSize(capacity));
 	}
 

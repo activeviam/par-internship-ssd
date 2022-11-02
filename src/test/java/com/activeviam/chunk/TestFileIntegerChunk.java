@@ -7,31 +7,28 @@
 
 package com.activeviam.chunk;
 
-import com.activeviam.reference.MemoryAllocatorOnFile;
-import java.nio.file.Path;
+import com.activeviam.allocator.MemoryAllocator;
+import com.activeviam.allocator.UnsafeNativeMemoryAllocator;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.io.TempDir;
 
 public class TestFileIntegerChunk implements SpecTestIntegerChunk {
 
-  private MemoryAllocatorOnFile allocator;
+	private MemoryAllocator allocator;
 
-  @TempDir static Path tempDir;
+	@BeforeEach
+	void createAllocator() {
+		this.allocator = new UnsafeNativeMemoryAllocator();
+	}
 
-  @BeforeEach
-  void createAllocator() {
-    this.allocator = new MemoryAllocatorOnFile(tempDir);
-  }
+	@AfterEach
+	void cleanAllocator() {
+		this.allocator.close();
+		this.allocator = null;
+	}
 
-  @AfterEach
-  void cleanAllocator() {
-    this.allocator.close();
-    this.allocator = null;
-  }
-
-  @Override
-  public IntegerChunk createChunk(int capacity) {
-    return new DirectIntegerChunk(this.allocator, capacity);
-  }
+	@Override
+	public IntegerChunk createChunk(int capacity) {
+		return new DirectIntegerChunk(this.allocator, capacity);
+	}
 }

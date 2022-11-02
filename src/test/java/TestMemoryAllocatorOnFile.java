@@ -6,7 +6,6 @@
  */
 
 import com.activeviam.allocator.MemoryAllocator;
-import com.activeviam.reference.MemoryAllocatorOnFile;
 import java.nio.file.Path;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;

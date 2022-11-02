@@ -16,6 +16,7 @@ import com.activeviam.vector.DoubleFixedBlockVector;
 import com.activeviam.vector.EmptyVector;
 import com.activeviam.vector.IVector;
 import com.activeviam.vector.IVectorAllocator;
+import com.activeviam.vector.IntegerFixedBlockVector;
 
 /**
  * A memory allocator that allocates direct memory (off-heap) everything via Unsafe.
@@ -137,6 +138,34 @@ public class DirectMemoryAllocator implements IChunkAllocator {
 		@Override
 		protected DirectDoubleVectorBlock allocateBlock(int capacity) {
 			return new DirectDoubleVectorBlock(DirectMemoryAllocator.this.allocator, capacity);
+		}
+	}
+
+	/**
+	 * An implementation of an {@link IVectorAllocator} that allocates off-heap vectors of doubles via Unsafe.
+	 *
+	 * @author ActiveViam
+	 */
+	public class DirectIntegerVectorAllocator extends ABlockVectorAllocator<DirectIntegerVectorBlock> implements IVectorAllocator {
+
+		@Override
+		public void reallocateVector(IVector vector) {
+
+		}
+
+		@Override
+		public Types getComponentType() {
+			return Types.DOUBLE;
+		}
+
+		@Override
+		protected AFixedBlockVector createVector(DirectIntegerVectorBlock block, int length) {
+			return new IntegerFixedBlockVector(block, 0, length);
+		}
+
+		@Override
+		protected DirectIntegerVectorBlock allocateBlock(int capacity) {
+			return new DirectIntegerVectorBlock(DirectMemoryAllocator.this.allocator, capacity);
 		}
 	}
 }

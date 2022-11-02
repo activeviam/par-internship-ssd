@@ -10,6 +10,7 @@ package com.activeviam.vector;
 import com.activeviam.Types;
 import com.activeviam.allocator.AllocationType;
 import com.activeviam.block.IBlock;
+import com.activeviam.chunk.ADirectVectorBlock;
 import java.util.Arrays;
 
 /**
@@ -55,8 +56,8 @@ public class IntegerFixedBlockVector extends AFixedBlockVector {
 		final IBlock rightBlock = ((DoubleFixedBlockVector) vector).block;
 		final int rghtLen = vector.size();
 		final IBlock leftBlock = this.block;
-		long rghtPos = getPos(rightBlock, 2);
-		long lftPos = getPos(leftBlock, 2);
+		long rghtPos = getPos((ADirectVectorBlock) rightBlock, 2);
+		long lftPos = getPos((ADirectVectorBlock) leftBlock, 2);
 		final long maxPos = getMaxPos(rghtPos, rghtLen, 2);
 		final long maxUnroll = getMaxUnroll(rghtPos, rghtLen, 2, 16);
 		for (; rghtPos < maxUnroll; rghtPos += 16, lftPos += 16) {
