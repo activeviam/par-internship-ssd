@@ -39,9 +39,4 @@ public interface IReleasableVector extends IVector {
 	 */
 	void releaseReference();
 
-	/**
-	 * Signals the vector to try to collect itself.
-	 */
-	void collect();
-
 }

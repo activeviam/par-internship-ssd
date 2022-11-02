@@ -20,6 +20,8 @@ import com.activeviam.vector.IVector;
  */
 public interface IChunk<K> {
 
+	Runnable EMPTY_DESTORYER = () -> {};
+
 	/** Returns the (fixed) capacity of the chunk (number of elements it can store). */
 	int capacity();
 
@@ -72,4 +74,18 @@ public interface IChunk<K> {
 	 * @param value the value to write
 	 */
 	void write(int position, Object value);
+
+	/**
+	 * Equivalent to a finalizer for this chunk, but that can be called by the application when it is certain that
+	 * the chunk will not be used or even reached anymore.
+	 * <p>
+	 * Chunk implementations can use this opportunity to dereference objects, or even free memory in the case of
+	 * direct memory chunks. For that reason it is unsafe to call destroy() and it is possible to crash the JVM if
+	 * the chunk is accessed after its memory has been reclaimed.
+	 * <p>
+	 * Use {@link IChunk#EMPTY_DESTORYER} for chunks that doesn't need destroy action.
+	 *
+	 * @return the {@link Runnable} to run to actually free the data
+	 */
+	Runnable destroy();
 }

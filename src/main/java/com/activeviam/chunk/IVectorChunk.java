@@ -10,9 +10,22 @@ package com.activeviam.chunk;
 import com.activeviam.vector.IVector;
 
 /**
+ * Interface for chunk of vectors.
+ *
  * @author ActiveViam
  */
 public interface IVectorChunk extends IChunk<IVector> {
+
+	/**
+	 * Writes an object of type vector at the given position.
+	 * <p>
+	 * The provided vector might not be the written one, for instance it can be cloned off-heap before being
+	 * written.
+	 *
+	 * @param position the position at which to write the vector
+	 * @param vector the vector to write
+	 */
+	void writeVector(int position, IVector vector);
 
 	@Override
 	default int readInt(int position)  {

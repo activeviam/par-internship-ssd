@@ -8,6 +8,7 @@
 package com.activeviam.vector;
 
 import com.activeviam.Types;
+import com.activeviam.allocator.AllocationType;
 import com.activeviam.iterator.IPrimitiveIterator;
 
 /**
@@ -17,6 +18,11 @@ import com.activeviam.iterator.IPrimitiveIterator;
  * @author ActiveViam
  */
 public interface IVector {
+
+	/**
+	 * Returns where this vector is allocated.
+	 */
+	AllocationType getAllocation();
 
 	/**
 	 * Gets whether {@code null} is stored in a given row at a given position or not.

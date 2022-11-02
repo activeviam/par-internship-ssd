@@ -8,6 +8,7 @@
 package com.activeviam.vector;
 
 import com.activeviam.Types;
+import com.activeviam.allocator.AllocationType;
 import com.activeviam.iterator.IPrimitiveIterator;
 import java.util.EnumMap;
 import java.util.NoSuchElementException;
@@ -371,6 +372,11 @@ public class EmptyVector implements ITransientVector, Cloneable, IPrimitiveItera
 	}
 
 	@Override
+	public AllocationType getAllocation() {
+		return AllocationType.ON_HEAP;
+	}
+
+	@Override
 	public boolean isNull(final int position) {
 		throw new IndexOutOfBoundsException("Tried to access the content of an empty vector.");
 	}
@@ -538,11 +544,6 @@ public class EmptyVector implements ITransientVector, Cloneable, IPrimitiveItera
 	@Override
 	public ITransientVector getUnderlyingArray() {
 		return this;
-	}
-
-	@Override
-	public void collect() {
-		// Nothing to do
 	}
 
 }

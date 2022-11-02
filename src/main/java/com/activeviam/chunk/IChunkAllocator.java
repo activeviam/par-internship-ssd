@@ -12,6 +12,9 @@ public interface IChunkAllocator {
 
 	DoubleChunk allocateDoubleChunk(int size);
 
-	IVectorChunk allocateVectorChunk(int size, IVectorAllocator vectorAllocator);
+	IVectorChunk allocateVectorChunk(int size, Types type);
 
+	IVectorAllocator getVectorAllocator(Types type);
+
+	boolean isTransient();
 }

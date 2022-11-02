@@ -7,6 +7,7 @@
 
 package com.activeviam.vector;
 
+import com.activeviam.allocator.AllocationType;
 import com.activeviam.block.IBlock;
 import com.activeviam.iterator.IPrimitiveIterator;
 
@@ -29,11 +30,6 @@ public abstract class AArrayVector extends AVector implements IBlock, ITransient
 
 	@Override
 	public void release(final int v) {
-		/* Do nothing for array-based vector */
-	}
-
-	@Override
-	public void collect() {
 		/* Do nothing for array-based vector */
 	}
 
@@ -69,6 +65,11 @@ public abstract class AArrayVector extends AVector implements IBlock, ITransient
 	public void transfer(final int position, final int[] dest) {
 		throw new UnsupportedOperationException(
 				"This method is not implemented for the vector " + getClass().getName());
+	}
+
+	@Override
+	public AllocationType getAllocation() {
+		return AllocationType.ON_HEAP;
 	}
 
 	@Override

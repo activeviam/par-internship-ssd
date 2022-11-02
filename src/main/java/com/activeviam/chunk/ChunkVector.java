@@ -8,9 +8,12 @@
 package com.activeviam.chunk;
 
 import com.activeviam.Types;
+import com.activeviam.allocator.AllocationType;
 import com.activeviam.vector.IReleasableVector;
 import com.activeviam.vector.IVector;
-import com.activeviam.vector.IVectorAllocator;
+import com.activeviam.vector.VectorFinalizer;
+import java.lang.ref.WeakReference;
+import java.util.Arrays;
 
 /**
  * The base implementation for a chunk that is able to store vectors.
@@ -19,16 +22,67 @@ import com.activeviam.vector.IVectorAllocator;
  */
 public class ChunkVector implements IVectorChunk {
 
-	protected final transient IVectorAllocator allocator;
+	private final transient IChunkAllocator allocator;
+	private final IVector[] vectors;
+	private final Runnable destroyAction;
+	private final Types type;
 
 	/**
 	 * Constructor.
 	 *
-	 * @param chunkSize the size of the chunk
+	 * @param size the size of the chunk
+	 * @param type the vector type
 	 * @param allocator the allocator to use to allocate new vectors
 	 */
-	public ChunkVector(int chunkSize, IVectorAllocator allocator) {
+	public ChunkVector(int size, Types type, IChunkAllocator allocator) {
+		this.type = type;
 		this.allocator = allocator;
+		this.vectors = new IVector[size];
+		if (allocator.isTransient()) {
+			this.destroyAction = VectorFinalizer.register(this, directDestroyer(this.vectors));
+		} else {
+			this.destroyAction = transientDestroyer(this);
+		}
+	}
+
+	/**
+	 * Creates a destroy action for non-transient chunks.
+	 * <p>
+	 * This destroyer is in charge of both cleaning the {@link #vectors} and releasing references for all hold
+	 * vectors.
+	 * <p>
+	 * This destroyer must be used when using off-heap memory. For transient chunks, it
+	 * relies only on {@link #transientDestroyer()}.
+	 *
+	 * @param objects list of vectors to clean
+	 * @return a runnable action performing a clean destroy of a chunk objects
+	 */
+	private static Runnable directDestroyer(final Object[] objects) {
+		/*
+		 * This method is static so that each new Runnable does not capture "this". This was initially a source of
+		 * memory leak.
+		 */
+		return () -> {
+			for (final Object vector : objects) {
+				if (vector != null) {
+					((IReleasableVector) vector).releaseReference();
+				}
+			}
+
+			Arrays.fill(objects, null);
+		};
+	}
+
+	static Runnable transientDestroyer(final ChunkVector chunk) {
+		/* This method is static so that each new Runnable does not capture "this".
+		 * This was initially a source of memory leak. */
+		final WeakReference<?> objs = new WeakReference<>(chunk.vectors);
+		return () -> {
+			final Object o;
+			if ((o = objs.get()) != null) {
+				Arrays.fill((Object[]) o, null);
+			}
+		};
 	}
 
 	@Override
@@ -50,6 +104,11 @@ public class ChunkVector implements IVectorChunk {
 		}
 	}
 
+	@Override
+	public Runnable destroy() {
+		return this.destroyAction;
+	}
+
 	/**
 	 * Clones the vector. If this chunk is off heap the vector will be cloned off heap.
 	 *
@@ -67,7 +126,7 @@ public class ChunkVector implements IVectorChunk {
 		// If the allocator is transient, no need to count the references: they
 		// will never be released.
 		IVector vectorToWrite = vector;
-		if (!isTransient()) {
+		if (this.allocator.isTransient()) {
 			if (vectorToWrite != null) {
 				if (vectorToWrite.getAllocation() != AllocationType.DIRECT) {
 					// reallocate on-heap vectors to direct memory if the chunk is off-heap
@@ -78,13 +137,13 @@ public class ChunkVector implements IVectorChunk {
 				// implement IReleasableVector, including custom wrapper vectors
 				((IReleasableVector) vectorToWrite).acquireReference();
 			}
-			final IVector oldValue = super.read(position);
+			final IVector oldValue = readVector(position);
 			if (oldValue != null) {
 				// Decrease the reference counter of the old value
 				((IReleasableVector) oldValue).releaseReference();
 			}
 		}
-		super.write(position, vectorToWrite);
+		this.vectors[position] = vectorToWrite;
 	}
 
 	/**
@@ -125,7 +184,7 @@ public class ChunkVector implements IVectorChunk {
 	}
 
 	private IVector allocateVector(final int size) {
-		return allocator.allocateNewVector(size);
+		return this.allocator.getVectorAllocator(this.type).allocateNewVector(size);
 	}
 
 	/**
@@ -134,7 +193,7 @@ public class ChunkVector implements IVectorChunk {
 	 * @return the component type of the vectors stored in this chunk
 	 */
 	protected Types getComponentType() {
-		return this.allocator.getComponentType();
+		return this.type;
 	}
 
 }
