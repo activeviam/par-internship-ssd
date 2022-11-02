@@ -11,7 +11,6 @@ import com.activeviam.Types;
 import com.activeviam.UnsafeUtil;
 import com.activeviam.allocator.AllocationType;
 import com.activeviam.allocator.MemoryAllocator;
-import com.activeviam.block.IBlock;
 
 /**
  * A block that can store vectors using direct memory allocated an {@link MemoryAllocator}.

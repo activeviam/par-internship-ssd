@@ -12,7 +12,7 @@ import com.activeviam.allocator.UnsafeNativeMemoryAllocator;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 
-public class TestFileIntegerChunk implements SpecTestIntegerChunk {
+public class TestDirectDoubleChunk implements SpecTestDoubleChunk {
 
 	private MemoryAllocator allocator;
 
@@ -23,12 +23,11 @@ public class TestFileIntegerChunk implements SpecTestIntegerChunk {
 
 	@AfterEach
 	void cleanAllocator() {
-		this.allocator.close();
 		this.allocator = null;
 	}
 
 	@Override
-	public IntegerChunk createChunk(int capacity) {
-		return new DirectIntegerChunk(this.allocator, capacity);
+	public DoubleChunk createChunk(int capacity) {
+		return new DirectDoubleChunk(this.allocator, capacity);
 	}
 }

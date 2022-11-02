@@ -10,7 +10,6 @@ package com.activeviam.chunk;
 import com.activeviam.Types;
 import com.activeviam.allocator.MemoryAllocator;
 import com.activeviam.allocator.UnsafeNativeMemoryAllocator;
-import com.activeviam.block.IBlock;
 import com.activeviam.vector.AFixedBlockVector;
 import com.activeviam.vector.DoubleFixedBlockVector;
 import com.activeviam.vector.EmptyVector;

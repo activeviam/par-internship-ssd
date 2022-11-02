@@ -5,7 +5,7 @@
  * reproduction or transfer of this material is strictly prohibited
  */
 
-package com.activeviam.reference;
+package com.activeviam;
 
 public class PrintUtil {
 

@@ -7,9 +7,9 @@
 
 package com.activeviam.heap;
 
-import com.qfs.util.IPrimitiveIterator;
-import com.qfs.vector.ITransientVector;
-import com.qfs.vector.array.impl.ArrayIntegerVector;
+import com.activeviam.iterator.IPrimitiveIterator;
+import com.activeviam.vector.ArrayIntegerVector;
+import com.activeviam.vector.ITransientVector;
 import java.util.Arrays;
 import java.util.NoSuchElementException;
 

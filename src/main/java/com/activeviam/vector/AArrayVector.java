@@ -8,7 +8,7 @@
 package com.activeviam.vector;
 
 import com.activeviam.allocator.AllocationType;
-import com.activeviam.block.IBlock;
+import com.activeviam.chunk.IBlock;
 import com.activeviam.iterator.IPrimitiveIterator;
 
 /**

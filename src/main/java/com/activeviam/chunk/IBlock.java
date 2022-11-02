@@ -5,7 +5,7 @@
  * reproduction or transfer of this material is strictly prohibited
  */
 
-package com.activeviam.block;
+package com.activeviam.chunk;
 
 import com.activeviam.Types;
 import com.activeviam.allocator.AllocationType;
