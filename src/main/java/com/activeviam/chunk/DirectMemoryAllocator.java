@@ -8,8 +8,11 @@
 package com.activeviam.chunk;
 
 import com.activeviam.Types;
+import com.activeviam.allocator.MemoryAllocator;
+import com.activeviam.allocator.UnsafeNativeMemoryAllocator;
 import com.activeviam.block.IBlock;
 import com.activeviam.vector.AFixedBlockVector;
+import com.activeviam.vector.DoubleFixedBlockVector;
 import com.activeviam.vector.EmptyVector;
 import com.activeviam.vector.IVector;
 import com.activeviam.vector.IVectorAllocator;
@@ -20,6 +23,8 @@ import com.activeviam.vector.IVectorAllocator;
  * @author ActiveViam
  */
 public class DirectMemoryAllocator implements IChunkAllocator {
+
+	private final MemoryAllocator allocator = new UnsafeNativeMemoryAllocator();
 
 	@Override
 	public IntegerChunk allocateIntegerChunk(int size) {
@@ -85,7 +90,7 @@ public class DirectMemoryAllocator implements IChunkAllocator {
 		 * @param length the length of the vector, in number of components
 		 * @return the newly created vector
 		 */
-		protected abstract AFixedBlockVector<B> createVector(B block, int length);
+		protected abstract AFixedBlockVector createVector(B block, int length);
 
 		/**
 		 * Allocates a new block.
@@ -116,11 +121,6 @@ public class DirectMemoryAllocator implements IChunkAllocator {
 	public static class DirectIntegerVectorAllocator extends ABlockVectorAllocator implements IVectorAllocator {
 
 		@Override
-		public IVector allocateNewVector(int length) {
-			return null;
-		}
-
-		@Override
 		public void reallocateVector(IVector vector) {
 
 		}
@@ -141,12 +141,7 @@ public class DirectMemoryAllocator implements IChunkAllocator {
 	 *
 	 * @author ActiveViam
 	 */
-	public static class DirectDoubleVectorAllocator implements IVectorAllocator {
-
-		@Override
-		public IVector allocateNewVector(int length) {
-			return null;
-		}
+	public class DirectDoubleVectorAllocator extends ABlockVectorAllocator implements IVectorAllocator {
 
 		@Override
 		public void reallocateVector(IVector vector) {
@@ -154,13 +149,18 @@ public class DirectMemoryAllocator implements IChunkAllocator {
 		}
 
 		@Override
-		public IVector copy(IVector toCopy) {
+		public Types getComponentType() {
 			return null;
 		}
 
 		@Override
-		public Types getComponentType() {
-			return null;
+		protected AFixedBlockVector createVector(IBlock block, int length) {
+			return new DoubleFixedBlockVector(block, 0, length);
+		}
+
+		@Override
+		protected IBlock allocateBlock() {
+			return new DirectDoubleVectorBlock(DirectMemoryAllocator.this.allocator);
 		}
 	}
 }

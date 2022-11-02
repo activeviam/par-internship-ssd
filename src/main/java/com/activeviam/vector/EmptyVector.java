@@ -74,14 +74,6 @@ public class EmptyVector implements ITransientVector, Cloneable, IPrimitiveItera
 	}
 
 	@Override
-	public ITransientVector subVector(final int start, final int length) {
-		if (start > 0 || length > 0) {
-			throw new IndexOutOfBoundsException("Tried to access the content of an empty vector.");
-		}
-		return this;
-	}
-
-	@Override
 	public IVector cloneOnHeap() {
 		return this;
 	}

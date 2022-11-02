@@ -7,19 +7,18 @@
 
 package com.activeviam.chunk;
 
-import com.activeviam.allocator.UnsafeNativeMemoryAllocator;
+import com.activeviam.allocator.MemoryAllocator;
 import java.io.Closeable;
 
 abstract class AbstractDirectChunk<K> implements IChunk<K>, Closeable {
 
 	private final int capacity;
-
-	private final UnsafeNativeMemoryAllocator allocator;
+	private final MemoryAllocator allocator;
 	long ptr;
 	private final long blockSize;
 
 	public AbstractDirectChunk(
-			final UnsafeNativeMemoryAllocator allocator, final int capacity, final long blockSize) {
+			final MemoryAllocator allocator, final int capacity, final long blockSize) {
 		this.capacity = capacity;
 		this.allocator = allocator;
 		this.blockSize = blockSize;

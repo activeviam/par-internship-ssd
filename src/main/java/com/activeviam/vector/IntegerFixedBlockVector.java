@@ -7,6 +7,8 @@
 
 package com.activeviam.vector;
 
+import com.activeviam.Types;
+import com.activeviam.allocator.AllocationType;
 import com.activeviam.block.IBlock;
 import java.util.Arrays;
 
@@ -29,10 +31,55 @@ public class IntegerFixedBlockVector extends AFixedBlockVector {
 	}
 
 	@Override
+	public AllocationType getAllocation() {
+		return this.block.getAllocation();
+	}
+
+	@Override
 	public ITransientVector sort() {
 		final int[] a = toIntArray();
 		Arrays.sort(a);
 		return new ArrayIntegerVector(a);
+	}
+
+	@Override
+	public Types getComponentType() {
+		return Types.INTEGER;
+	}
+
+	@Override
+	public void copyFrom(IVector vector) {
+		final int length = vector.size();
+		checkIndex(0, length);
+
+		final IBlock rightBlock = ((DoubleFixedBlockVector) vector).block;
+		final int rghtLen = vector.size();
+		final IBlock leftBlock = this.block;
+		long rghtPos = getPos(rightBlock, 2);
+		long lftPos = getPos(leftBlock, 2);
+		final long maxPos = getMaxPos(rghtPos, rghtLen, 2);
+		final long maxUnroll = getMaxUnroll(rghtPos, rghtLen, 2, 16);
+		for (; rghtPos < maxUnroll; rghtPos += 16, lftPos += 16) {
+			UNSAFE.putDouble(
+					lftPos,
+					UNSAFE.getDouble(rghtPos));
+			UNSAFE.putDouble(
+					lftPos + (1 * (1 << 2)),
+					UNSAFE.getDouble(rghtPos + (1 * (1 << 2))));
+			UNSAFE.putDouble(
+					lftPos + (2 * (1 << 2)),
+					UNSAFE.getDouble(rghtPos + (2 * (1 << 2))));
+			UNSAFE.putDouble(
+					lftPos + (3 * (1 << 2)),
+					UNSAFE.getDouble(rghtPos + (3 * (1 << 2))));
+		}
+
+		for (; rghtPos < maxPos; rghtPos += 1 << 2, lftPos += 1 << 2) {
+			UNSAFE.putDouble(
+					lftPos,
+					UNSAFE.getDouble(rghtPos));
+		}
+
 	}
 
 	@Override
@@ -86,12 +133,6 @@ public class IntegerFixedBlockVector extends AFixedBlockVector {
 	}
 
 	@Override
-	protected IntegerFixedBlockVector createVector(final IBlock block, final int position, final int length) {
-
-		return new IntegerFixedBlockVector(block, position, length);
-	}
-
-	@Override
 	public double average() {
 		return (double) sumInt() / this.length;
 	}
@@ -109,6 +150,36 @@ public class IntegerFixedBlockVector extends AFixedBlockVector {
 	@Override
 	public IVector cloneOnHeap() {
 		return new ArrayIntegerVector(toIntArray());
+	}
+
+	@Override
+	public void plus(IVector vector) {
+
+	}
+
+	@Override
+	public void plusPositiveValues(IVector vector) {
+
+	}
+
+	@Override
+	public void plusNegativeValues(IVector vector) {
+
+	}
+
+	@Override
+	public void minus(IVector vector) {
+
+	}
+
+	@Override
+	public void minusPositiveValues(IVector vector) {
+
+	}
+
+	@Override
+	public void minusNegativeValues(IVector vector) {
+
 	}
 
 }

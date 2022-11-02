@@ -27,17 +27,6 @@ public interface IVector extends IArrayReader, IArrayWriter {
 	AllocationType getAllocation();
 
 	/**
-	 * Returns a restricted view of this vector.
-	 * <p>
-	 * Modifications made to the returned vector will be seen by this vector, and reciprocally.
-	 *
-	 * @param start the index at which to start
-	 * @param length the length of the view
-	 * @return a restricted view of this vector
-	 */
-	IVector subVector(int start, int length);
-
-	/**
 	 * Builds a <strong>transient</strong> clone of the vector, sorts it in ascending order then returns it.
 	 *
 	 * @return a sorted, transient, clone of the vector

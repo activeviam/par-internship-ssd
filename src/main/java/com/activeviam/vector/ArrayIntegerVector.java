@@ -319,13 +319,6 @@ public class ArrayIntegerVector extends AArrayVector {
 	}
 
 	@Override
-	public IVector subVector(final int start, final int length) {
-		final int[] subArray = new int[length];
-	  System.arraycopy(this.underlying, start, subArray, 0, length);
-		return new ArrayIntegerVector(subArray);
-	}
-
-	@Override
 	public IPrimitiveIterator topK(final int k) {
 		checkIndex(0, k);
 		return topK(0, size(), k);

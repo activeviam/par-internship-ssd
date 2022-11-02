@@ -7,6 +7,8 @@
 
 package com.activeviam.vector;
 
+import com.activeviam.Types;
+import com.activeviam.allocator.AllocationType;
 import com.activeviam.block.IBlock;
 import java.util.Arrays;
 
@@ -29,10 +31,54 @@ public class DoubleFixedBlockVector extends AFixedBlockVector {
 	}
 
 	@Override
+	public AllocationType getAllocation() {
+		return this.block.getAllocation();
+	}
+
+	@Override
 	public ITransientVector sort() {
 		final double[] a = toDoubleArray();
 		Arrays.sort(a);
 		return new ArrayDoubleVector(a);
+	}
+
+	@Override
+	public Types getComponentType() {
+		return Types.DOUBLE;
+	}
+
+	@Override
+	public void copyFrom(IVector vector) {
+		final int length = vector.size();
+		checkIndex(0, length);
+
+		final IBlock rightBlock = ((DoubleFixedBlockVector) vector).block;
+		final int rghtLen = vector.size();
+		final IBlock leftBlock = this.block;
+		long rghtPos = getPos(rightBlock, 3);
+		long lftPos = getPos(leftBlock, 3);
+		final long maxPos = getMaxPos(rghtPos, rghtLen, 3);
+		final long maxUnroll = getMaxUnroll(rghtPos, rghtLen, 3, 32);
+		for (; rghtPos < maxUnroll; rghtPos += 32, lftPos += 32) {
+			UNSAFE.putDouble(
+					lftPos,
+					UNSAFE.getDouble(rghtPos));
+			UNSAFE.putDouble(
+					lftPos + (1 * (1 << 3)),
+					UNSAFE.getDouble(rghtPos + (1 * (1 << 3))));
+			UNSAFE.putDouble(
+					lftPos + (2 * (1 << 3)),
+					UNSAFE.getDouble(rghtPos + (2 * (1 << 3))));
+			UNSAFE.putDouble(
+					lftPos + (3 * (1 << 3)),
+					UNSAFE.getDouble(rghtPos + (3 * (1 << 3))));
+		}
+
+		for (; rghtPos < maxPos; rghtPos += 1 << 3, lftPos += 1 << 3) {
+			UNSAFE.putDouble(
+					lftPos,
+					UNSAFE.getDouble(rghtPos));
+		}
 	}
 
 	@Override
@@ -86,12 +132,6 @@ public class DoubleFixedBlockVector extends AFixedBlockVector {
 	}
 
 	@Override
-	protected DoubleFixedBlockVector createVector(final IBlock block, final int position, final int length) {
-
-		return new DoubleFixedBlockVector(block, position, length);
-	}
-
-	@Override
 	public double average() {
 		return sumDouble() / length;
 	}
@@ -109,6 +149,36 @@ public class DoubleFixedBlockVector extends AFixedBlockVector {
 	@Override
 	public IVector cloneOnHeap() {
 		return new ArrayDoubleVector(toDoubleArray());
+	}
+
+	@Override
+	public void plus(IVector vector) {
+
+	}
+
+	@Override
+	public void plusPositiveValues(IVector vector) {
+
+	}
+
+	@Override
+	public void plusNegativeValues(IVector vector) {
+
+	}
+
+	@Override
+	public void minus(IVector vector) {
+
+	}
+
+	@Override
+	public void minusPositiveValues(IVector vector) {
+
+	}
+
+	@Override
+	public void minusNegativeValues(IVector vector) {
+
 	}
 
 }

@@ -407,13 +407,6 @@ public class ArrayDoubleVector extends AArrayVector {
 	}
 
 	@Override
-	public IVector subVector(final int start, final int length) {
-		final double[] subArray = new double[length];
-	  System.arraycopy(this.underlying, start, subArray, 0, length);
-		return new ArrayDoubleVector(subArray);
-	}
-
-	@Override
 	public IPrimitiveIterator topK(final int k) {
 		checkIndex(0, k);
 		return topK(0, size(), k);

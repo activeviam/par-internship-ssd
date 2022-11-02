@@ -11,7 +11,6 @@ import com.activeviam.UnsafeUtil;
 import com.activeviam.block.IBlock;
 import com.activeviam.iterator.IPrimitiveIterator;
 import com.activeviam.reference.TombStoneBlock;
-import java.io.ObjectStreamException;
 
 /**
  * Implementation of a vector that is based on blocks to retrieve its underlying data.
@@ -20,15 +19,17 @@ import java.io.ObjectStreamException;
  */
 public abstract class AFixedBlockVector extends AVector {
 
+	/** Unsafe provider. */
+	protected static final sun.misc.Unsafe UNSAFE = UnsafeUtil.getUnsafe();
+	/** Offset of the refCount field for CAS. */
+	protected static final long REF_COUNT_FIELD_OFFSET = UnsafeUtil.getFieldOffset(AFixedBlockVector.class, "refCount");
+
 	/**
 	 * Counter of reference to this vector (i.e. the number of chunks it is written on). If the counter reaches
 	 * zero, this vector is considered as dead, it will drop the acquire it has taken on its own block at the
 	 * allocation time.
 	 */
 	protected volatile int refCount;
-
-	/** Offset of the refCount field for CAS. */
-	protected static final long REF_COUNT_FIELD_OFFSET = UnsafeUtil.getFieldOffset(AFixedBlockVector.class, "refCount");
 
 	protected final int position;
 	protected final int length;
@@ -178,28 +179,9 @@ public abstract class AFixedBlockVector extends AVector {
 	}
 
 	@Override
-	public IVector subVector(final int start, final int length) {
-		if (length == 0) {
-			return EmptyVector.emptyVector(getComponentType());
-		}
-		checkIndex(start, length);
-		return createVector(this.block, start, length);
-	}
-
-	@Override
 	public int hashCode() {
 		return block.hashCode(0, length);
 	}
-
-	/**
-	 * Creates a {@link AFixedBlockVector} version of this vector.
-	 *
-	 * @param block the block on which to create the vector
-	 * @param position the position in the block
-	 * @param length the length of the vector
-	 * @return a {@link AFixedBlockVector} version of this vector
-	 */
-	protected abstract AFixedBlockVector createVector(IBlock block, int position, int length);
 
 	@Override
 	public int[] topKIndices(final int k) {
@@ -297,13 +279,45 @@ public abstract class AFixedBlockVector extends AVector {
 	}
 
 	/**
-	 * Replaces the vector with its array version when serializing.
+	 * Returns the direct memory address vector position.
 	 *
-	 * @return an on-heap array clone of this vector
-	 * @throws ObjectStreamException failure
+	 * @param block the block associated with this vector
+	 * @param posToIncOrder the order of the size of the vector contained class
+	 * @return the direct memory address vector position
 	 */
-	protected Object writeReplace() throws ObjectStreamException {
-		return cloneOnHeap();
+	protected static long getPos(final ADirectVectorBlock block, final int posToIncOrder) {
+
+		return block.getAddress() + (1 << posToIncOrder);
+	}
+
+	/**
+	 * Returns the direct memory address of the last vector coordinate.
+	 *
+	 * @param pos the direct memory address vector position
+	 * @param len the size of this vector
+	 * @param posToIncOrder the order of the size of the vector contained class
+	 * @return the direct memory address of the last vector coordinate
+	 */
+	protected static long getMaxPos(final long pos, final long len, final int posToIncOrder) {
+		return pos + (len << posToIncOrder);
+	}
+
+	/**
+	 * Returns the direct memory address of the maximum unrolled vector coordinate.
+	 *
+	 * @param pos the direct memory address vector position
+	 * @param len the size of this vector
+	 * @param posToIncOrder the order of the size of the vector contained class
+	 * @param increment the number of bytes unrolled in each iteration
+	 * @return the direct memory address of the maximum unrolled vector coordinate
+	 */
+	protected static long getMaxUnroll(
+			final long pos,
+			final long len,
+			final int posToIncOrder,
+			final int increment) {
+
+		return pos + (((len << posToIncOrder) / increment) * increment);
 	}
 
 }
