@@ -50,13 +50,6 @@ public class OnHeapAllocator implements IChunkAllocator {
 		return true;
 	}
 
-
-	/**
-	 * An implementation of an {@link IVectorAllocator} that allocates on-heap vectors that relies on standard java
-	 * arrays.
-	 *
-	 * @author ActiveViam
-	 */
 	public abstract static class AArrayVectorAllocator implements IVectorAllocator {
 
 		/**

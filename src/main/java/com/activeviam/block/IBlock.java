@@ -8,6 +8,9 @@
 package com.activeviam.block;
 
 import com.activeviam.Types;
+import com.activeviam.allocator.AllocationType;
+import com.activeviam.chunk.IArrayReader;
+import com.activeviam.chunk.IArrayWriter;
 import com.activeviam.iterator.IPrimitiveIterator;
 import com.activeviam.vector.IVector;
 import java.util.Arrays;
@@ -18,7 +21,7 @@ import java.util.Arrays;
  *
  * @author ActiveViam
  */
-public interface IBlock {
+public interface IBlock extends IArrayReader, IArrayWriter {
 
 	/**
 	 * Returns the capacity of the block (i.e. the number of vectors components of type {@link #getComponentType()}
@@ -395,4 +398,5 @@ public interface IBlock {
 	 */
 	int quantileIndex(int position, int lgth, double r);
 
+	AllocationType getAllocation();
 }

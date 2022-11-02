@@ -16,7 +16,7 @@ package com.activeviam.reference;
 public interface IBlockAllocator {
 
   /** Value that indicates an allocation does not succeed. */
-  public static final long NULL_POINTER = -1L;
+  long NULL_POINTER = -1L;
 
   /** @return the size of piece of memory it must allocate via {@link #allocate()}. */
   long size();

@@ -12,7 +12,7 @@ package com.activeviam.vector;
  *
  * @author ActiveViam
  */
-public abstract class AVector implements IVector {
+public abstract class AVector implements IVector, IReleasableVector {
 
 	@Override
 	public Object[] toArray() {

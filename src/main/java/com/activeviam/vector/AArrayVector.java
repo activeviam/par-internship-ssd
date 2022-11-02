@@ -16,7 +16,7 @@ import com.activeviam.iterator.IPrimitiveIterator;
  *
  * @author ActiveViam
  */
-public abstract class AArrayVector extends AVector implements IBlock, ITransientVector, IReleasableVector {
+public abstract class AArrayVector extends AVector implements IBlock, ITransientVector {
 
 	@Override
 	public int capacity() {
